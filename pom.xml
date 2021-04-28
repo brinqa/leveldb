@@ -6,10 +6,10 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>100</version>
+        <version>110</version>
     </parent>
 
-    <groupId>io.github.pcmind</groupId>
+    <groupId>com.brinqa</groupId>
     <artifactId>leveldb-project</artifactId>
     <version>1.2.1-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -89,13 +89,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.github.pcmind</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>leveldb-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.github.pcmind</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>leveldb</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -118,4 +118,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
