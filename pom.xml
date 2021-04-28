@@ -84,6 +84,9 @@
         <air.check.skip-duplicate-finder>true</air.check.skip-duplicate-finder>
 
         <air.javadoc.lint>-missing</air.javadoc.lint>
+
+        <!-- override the release profile -->
+        <air.release.release-profiles>our-release</air.release.release-profiles>
     </properties>
 
     <dependencyManagement>
@@ -116,12 +119,23 @@
                     <repoToken>${converallstoken}</repoToken>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <profiles>
         <profile>
-            <id>release</id>
+            <id>our-release</id>
+            <properties>
+                <!-- tests run in the preparation step of the release -->
+                <skipTests>true</skipTests>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
