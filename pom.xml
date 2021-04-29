@@ -23,6 +23,14 @@
         <tag>HEAD</tag>
     </scm>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/brinqa/leveldb</url>
+        </repository>
+    </distributionManagement>
+
     <modules>
         <module>leveldb-api</module>
         <module>leveldb</module>
