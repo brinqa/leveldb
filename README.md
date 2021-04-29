@@ -49,16 +49,7 @@ of your `pom.xml`:
 <dependency>
     <groupId>com.brinqa</groupId>
     <artifactId>leveldb</artifactId>
-    <classifier>uber</classifier>
-    <version>1.2</version>
-</dependency>
-
-<!-- to enable snappy compression also include snappy lib -->
-<!-- snappy is important to keep DB small and reduce IO -->
-<dependency>
-    <groupId>org.iq80.snappy</groupId>
-    <artifactId>snappy</artifactId>
-    <version>0.4</version>
+    <version>1.2.5</version>
 </dependency>
 ```
 
