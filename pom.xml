@@ -17,24 +17,11 @@
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Port of LevelDB to Java</description>
     <scm>
-        <connection>scm:git:git@bitbucket.org:brinqa/leveldb.git</connection>
-        <developerConnection>scm:git:git@bitbucket.org:brinqa/leveldb.git</developerConnection>
-        <url>https://bitbucket.org/brinqa/leveldb</url>
+        <connection>scm:git:git@github.com:brinqa/leveldb.git</connection>
+        <developerConnection>scm:git:git@github.com:brinqa/leveldb.git</developerConnection>
+        <url>https://github.com/brinqa/leveldb</url>
         <tag>HEAD</tag>
     </scm>
-
-    <distributionManagement>
-        <repository>
-            <id>maven.brinqa.com</id>
-            <name>maven.brinqa.com-releases</name>
-            <url>https://maven.brinqa.com/artifactory/libs-release-local</url>
-        </repository>
-        <snapshotRepository>
-            <id>maven.brinqa.com</id>
-            <name>maven.brinqa.com-snapshots</name>
-            <url>https://maven.brinqa.com/artifactory/libs-snapshot-local</url>
-        </snapshotRepository>
-    </distributionManagement>
 
     <modules>
         <module>leveldb-api</module>
@@ -84,9 +71,6 @@
         <air.check.skip-duplicate-finder>true</air.check.skip-duplicate-finder>
 
         <air.javadoc.lint>-missing</air.javadoc.lint>
-
-        <!-- override the release profile -->
-        <air.release.release-profiles>our-release</air.release.release-profiles>
     </properties>
 
     <dependencyManagement>
@@ -128,22 +112,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>our-release</id>
-            <properties>
-                <!-- tests run in the preparation step of the release -->
-                <skipTests>true</skipTests>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
