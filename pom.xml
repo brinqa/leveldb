@@ -26,9 +26,14 @@
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub Packages</name>
+            <name>maven.brinqa.com-releases</name>
             <url>https://maven.pkg.github.com/brinqa/leveldb</url>
         </repository>
+        <snapshotRepository>
+            <id>github</id>
+            <name>maven.brinqa.com-snapshots</name>
+            <url>https://maven.pkg.github.com/brinqa/leveldb</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <modules>
