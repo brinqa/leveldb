@@ -76,19 +76,10 @@
     </developers>
 
     <properties>
-        <air.checkstyle.config-file>src/checkstyle/checks.xml</air.checkstyle.config-file>
         <air.license.header-file>src/license/LICENSE-HEADER.txt</air.license.header-file>
-
-        <!-- skip some checks -->
-        <air.check.skip-pmd>true</air.check.skip-pmd>
-        <air.check.skip-jacoco>true</air.check.skip-jacoco>
-        <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
-
-        <air.check.skip-checkstyle>${air.check.skip-basic}</air.check.skip-checkstyle>
-        <air.check.fail-checkstyle>${air.check.fail-basic}</air.check.fail-checkstyle>
-        <!-- leveldbjni used in unit tests depend on org.iq80.leveldb:leveldb-api that is duplicate from current project -->
-        <air.check.skip-duplicate-finder>true</air.check.skip-duplicate-finder>
-
+        <!-- skip all checks -->
+        <air.check.skip-all>true</air.check.skip-all>
+        <!-- javadoc lint -->
         <air.javadoc.lint>-missing</air.javadoc.lint>
 
         <!-- Latest URLs -->
@@ -114,18 +105,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.3.0</version>
-                <configuration>
-                    <repoToken>${converallstoken}</repoToken>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
