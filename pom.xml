@@ -70,7 +70,19 @@
         <!-- leveldbjni used in unit tests depend on org.iq80.leveldb:leveldb-api that is duplicate from current project -->
         <air.check.skip-duplicate-finder>true</air.check.skip-duplicate-finder>
 
+        <!-- release -->
+        <air.release.push-changes>true</air.release.push-changes>
+
+        <!-- javadoc lint -->
         <air.javadoc.lint>-missing</air.javadoc.lint>
+
+        <!-- Brinqa URLs -->
+        <air.repository.snapshot.id>maven.brinqa.com</air.repository.snapshot.id>
+        <air.repository.snapshot.url>https://maven.brinqa.com/artifactory/libs-snapshot-local
+        </air.repository.snapshot.url>
+
+        <air.repository.release.id>maven.brinqa.com</air.repository.release.id>
+        <air.repository.release.url>https://maven.brinqa.com/artifactory/libs-release-local</air.repository.release.url>
     </properties>
 
     <dependencyManagement>
