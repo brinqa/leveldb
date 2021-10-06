@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import org.iq80.leveldb.DBException;
@@ -617,7 +618,7 @@ public class VersionSet
         }
         else if (seekCompaction) {
             level = current.getFileToCompactLevel();
-            levelInputs = ImmutableList.of(current.getFileToCompact());
+            levelInputs = Lists.newArrayList(current.getFileToCompact());
         }
         else {
             return null;
