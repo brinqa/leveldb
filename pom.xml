@@ -10,7 +10,7 @@
 
     <groupId>com.brinqa</groupId>
     <artifactId>leveldb-project</artifactId>
-    <version>1.2.6</version>
+    <version>1.2.7-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -19,7 +19,7 @@
         <connection>scm:git:git@bitbucket.org:brinqa/leveldb.git</connection>
         <developerConnection>scm:git:git@bitbucket.org:brinqa/leveldb.git</developerConnection>
         <url>https://bitbucket.org/brinqa/leveldb</url>
-        <tag>1.2.6</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
