@@ -17,9 +17,9 @@
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Port of LevelDB to Java</description>
     <scm>
-        <connection>scm:git:git@github.com:brinqa/leveldb.git</connection>
-        <developerConnection>scm:git:git@github.com:brinqa/leveldb.git</developerConnection>
-        <url>https://github.com/brinqa/leveldb</url>
+        <connection>scm:git:git@bitbucket.org:brinqa/leveldb.git</connection>
+        <developerConnection>scm:git:git@bitbucket.org:brinqa/leveldb.git</developerConnection>
+        <url>https://bitbucket.org/brinqa/leveldb</url>
         <tag>HEAD</tag>
     </scm>
 
