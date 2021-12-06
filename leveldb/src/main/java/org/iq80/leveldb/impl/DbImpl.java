@@ -56,7 +56,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBComparator;
 import org.iq80.leveldb.DBException;
@@ -86,7 +85,6 @@ import org.iq80.leveldb.table.FilterPolicy;
 import org.iq80.leveldb.table.TableBuilder;
 import org.iq80.leveldb.table.UserComparator;
 import org.iq80.leveldb.util.Closeables;
-import org.iq80.leveldb.util.Compression;
 import org.iq80.leveldb.util.SafeListBuilder;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.SliceInput;
@@ -134,11 +132,6 @@ public class DbImpl implements DB {
         final File databaseDir = env.toFile(dbname);
         this.options = sanitizeOptions(databaseDir, rawOptions);
         this.ownsLogger = this.options.logger() != rawOptions.logger();
-
-        if (this.options.compressionType() == CompressionType.LZ4 && !Compression.available()) {
-            // Disable snappy if it's not available.
-            this.options.compressionType(CompressionType.NONE);
-        }
 
         this.databaseDir = databaseDir;
 

@@ -21,7 +21,6 @@ import static org.iq80.leveldb.util.SizeOf.SIZE_OF_INT;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import net.jpountz.lz4.LZ4Factory;
 
 /** Use LZ4 compression to reduce the size of the blocks. */
@@ -29,10 +28,6 @@ public final class Compression {
     private Compression() {}
 
     private static final LZ4Factory factory = LZ4Factory.fastestJavaInstance();
-
-    public static boolean available() {
-        return true;
-    }
 
     public static ByteBuffer uncompress(final ByteBuffer compressed) {
         byte[] rawLen = new byte[SIZE_OF_INT];
@@ -42,17 +37,6 @@ public final class Compression {
         factory.fastDecompressor().decompress(compressed, ret);
         ret.flip();
         return ret;
-    }
-
-    public static void uncompress(ByteBuffer compressed, ByteBuffer uncompressed)
-            throws IOException {
-        factory.safeDecompressor().decompress(compressed, uncompressed);
-    }
-
-    public static void uncompress(
-            byte[] input, int inputOffset, int length, byte[] output, int outputOffset)
-            throws IOException {
-        factory.safeDecompressor().decompress(input, inputOffset, length, output, outputOffset);
     }
 
     public static int compress(
@@ -67,10 +51,6 @@ public final class Compression {
         ByteArrayUtils.writeInt(output, 0, length);
         int size = factory.fastCompressor().compress(input, inputOffset, length, output, offset);
         return size + SIZE_OF_INT;
-    }
-
-    public static byte[] compress(String text) {
-        return factory.fastCompressor().compress(text.getBytes(StandardCharsets.UTF_8));
     }
 
     public static int maxCompressedLength(int length) {

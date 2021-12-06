@@ -195,22 +195,12 @@ public class DbBenchmark {
                 method = this::compact;
             } else if (benchmark.equals("crc32c")) {
                 method = this::crc32c;
-            } else if (benchmark.equals("snappycomp")) {
-                if (Compression.available()) {
-                    method = this::snappyCompress;
-                }
-            } else if (benchmark.equals("snappyuncomp")) {
-                if (Compression.available()) {
-                    method = this::snappyUncompressDirectBuffer;
-                }
-            } else if (benchmark.equals("unsnap-array")) {
-                if (Compression.available()) {
-                    method = this::snappyUncompressArray;
-                }
+            } else if (benchmark.equals("lz4comp")) {
+                method = this::lz4Compress;
+            } else if (benchmark.equals("lz4uncomp")) {
+                method = this::lz4UncompressDirectBuffer;
             } else if (benchmark.equals("unsnap-direct")) {
-                if (Compression.available()) {
-                    method = this::snappyUncompressDirectBuffer;
-                }
+                method = this::lz4UncompressDirectBuffer;
             } else if (benchmark.equals("heapprofile")) {
                 heapProfile();
             } else if (benchmark.equals("stats")) {
@@ -341,17 +331,12 @@ public class DbBenchmark {
             System.out.printf("WARNING: Assertions are enabled; benchmarks unnecessarily slow%n");
         }
 
-        // See if snappy is working by attempting to compress a compressible string
+        // See if lz4 is working by attempting to compress a compressible string
         String text = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy";
-        byte[] compressedText = null;
         try {
-            compressedText = Compression.compress(text);
+            Compression.maxCompressedLength(1000);
         } catch (Exception ignored) {
-        }
-        if (compressedText == null) {
-            System.out.printf("WARNING: Snappy compression is not enabled%n");
-        } else if (compressedText.length > text.length()) {
-            System.out.printf("WARNING: Snappy compression is not effective%n");
+            System.out.printf("WARNING: LZ4 compression is not enabled%n");
         }
     }
 
@@ -584,7 +569,7 @@ public class DbBenchmark {
         thread.stats.addMessage(label);
     }
 
-    private void snappyCompress(ThreadState thread) {
+    private void lz4Compress(ThreadState thread) {
         byte[] raw = newGenerator().generate(new Options().blockSize());
         byte[] compressedOutput = new byte[Compression.maxCompressedLength(raw.length)];
 
@@ -598,7 +583,7 @@ public class DbBenchmark {
                 bytes += raw.length;
                 produced += compressedSize;
             } catch (IOException ignored) {
-                thread.stats.addMessage("(snappy failure)");
+                thread.stats.addMessage("(lz4 failure)");
                 Throwables.propagateIfPossible(ignored, AssertionError.class);
             }
 
@@ -612,34 +597,7 @@ public class DbBenchmark {
         return new RandomGenerator(compressionRatio);
     }
 
-    private void snappyUncompressArray(ThreadState thread) {
-        int inputSize = new Options().blockSize();
-        byte[] compressedOutput = new byte[Compression.maxCompressedLength(inputSize)];
-        byte[] raw = newGenerator().generate(inputSize);
-        long bytes = 0;
-        int compressedLength;
-        try {
-            compressedLength = Compression.compress(raw, 0, raw.length, compressedOutput, 0);
-        } catch (IOException e) {
-            Throwables.propagateIfPossible(e, AssertionError.class);
-            return;
-        }
-        // attempt to uncompress the block
-        while (bytes < 5L * 1024 * 1048576) { // Compress 1G
-            try {
-                Compression.uncompress(compressedOutput, 0, compressedLength, raw, 0);
-                bytes += inputSize;
-            } catch (IOException ignored) {
-                thread.stats.addMessage("(snappy failure)");
-                throw Throwables.propagate(ignored);
-            }
-
-            thread.stats.finishedSingleOp();
-        }
-        thread.stats.addBytes(bytes);
-    }
-
-    private void snappyUncompressDirectBuffer(ThreadState thread) {
+    private void lz4UncompressDirectBuffer(ThreadState thread) {
         int inputSize = new Options().blockSize();
         byte[] compressedOutput = new byte[Compression.maxCompressedLength(inputSize)];
         byte[] raw = newGenerator().generate(inputSize);
@@ -651,24 +609,16 @@ public class DbBenchmark {
             return;
         }
 
-        ByteBuffer uncompressedBuffer = ByteBuffer.allocateDirect(inputSize);
         ByteBuffer compressedBuffer = ByteBuffer.allocateDirect(compressedLength);
         compressedBuffer.put(compressedOutput, 0, compressedLength);
 
         long bytes = 0;
         // attempt to uncompress the block
         while (bytes < 5L * 1024 * 1048576) { // Compress 1G
-            try {
-                uncompressedBuffer.clear();
-                compressedBuffer.position(0);
-                compressedBuffer.limit(compressedLength);
-                Compression.uncompress(compressedBuffer, uncompressedBuffer);
-                bytes += inputSize;
-            } catch (IOException ignored) {
-                thread.stats.addMessage("(snappy failure)");
-                Throwables.propagateIfPossible(ignored, AssertionError.class);
-                return;
-            }
+            compressedBuffer.position(0);
+            compressedBuffer.limit(compressedLength);
+            Compression.uncompress(compressedBuffer);
+            bytes += inputSize;
 
             thread.stats.finishedSingleOp();
             thread.stats.addBytes(bytes);
@@ -792,8 +742,7 @@ public class DbBenchmark {
                         // "readreverse",
                         "fill100K",
                         // "crc32c",
-                        "snappycomp",
-                        "unsnap-array",
+                        "lz4comp",
                         "unsnap-direct",
                         "stats")) {
             @Override

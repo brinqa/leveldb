@@ -59,7 +59,6 @@ import org.iq80.leveldb.impl.ValueType;
 import org.iq80.leveldb.iterator.SeekingDBIteratorAdapter;
 import org.iq80.leveldb.iterator.SeekingIterator;
 import org.iq80.leveldb.util.Closeables;
-import org.iq80.leveldb.util.Compression;
 import org.iq80.leveldb.util.ILRUCache;
 import org.iq80.leveldb.util.LRUCache;
 import org.iq80.leveldb.util.Slice;
@@ -269,11 +268,6 @@ public abstract class TableTest {
 
     @Test
     public void testTableTestApproximateOffsetOfCompressed() throws Exception {
-        if (!Compression.available()) {
-            System.out.println("skipping compression tests");
-            return;
-        }
-
         Random rnd = new Random(301);
         TableConstructor c = new TableConstructor(new BytewiseComparator());
         c.add("k01", "hello");
