@@ -58,6 +58,9 @@
     </developers>
 
     <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
         <air.checkstyle.config-file>src/checkstyle/checks.xml</air.checkstyle.config-file>
         <air.license.header-file>src/license/LICENSE-HEADER.txt</air.license.header-file>
         <air.check.skip-checkstyle>true</air.check.skip-checkstyle>
