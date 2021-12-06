@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>100</version>
+        <version>113</version>
     </parent>
 
     <groupId>com.brinqa</groupId>
@@ -59,7 +59,7 @@
 
     <properties>
         <!-- set back to Java 8 -->
-        <project.build.targetJdk>1.8</project.build.targetJdk>
+        <project.build.targetJdk>8</project.build.targetJdk>
 
         <air.checkstyle.config-file>src/checkstyle/checks.xml</air.checkstyle.config-file>
         <air.license.header-file>src/license/LICENSE-HEADER.txt</air.license.header-file>
