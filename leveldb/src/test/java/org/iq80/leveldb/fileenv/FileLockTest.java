@@ -17,20 +17,17 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import java.io.File;
-import java.io.IOException;
-
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class FileLockTest
-{
+import java.io.File;
+import java.io.IOException;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+public class FileLockTest {
     @Test
-    public void testCanDeleteFileAfterUnlock() throws IOException
-    {
+    public void testCanDeleteFileAfterUnlock() throws IOException {
         File databaseDir = FileUtils.createTempDir("leveldb");
         File lock1 = new File(databaseDir, "LOCK");
         FileLock lock = FileLock.tryLock(lock1);
@@ -41,33 +38,29 @@ public class FileLockTest
     }
 
     @Test
-    public void testCantDoubleLock() throws IOException
-    {
+    public void testCantDoubleLock() throws IOException {
         File databaseDir = FileUtils.createTempDir("leveldb");
         File lock1 = new File(databaseDir, "LOCK");
         FileLock lock = FileLock.tryLock(lock1);
         try {
             FileLock.tryLock(new File(databaseDir, "LOCK"));
             Assert.fail("No expected to aquire more than once the lock");
-        }
-        catch (Exception e) {
-            //expected
+        } catch (Exception e) {
+            // expected
         }
         lock.release();
     }
 
     @Test
-    public void testCanDeleteFileAfterLockFailure() throws IOException
-    {
+    public void testCanDeleteFileAfterLockFailure() throws IOException {
         File databaseDir = FileUtils.createTempDir("leveldb");
         File lock1 = new File(databaseDir, "LOCK");
         FileLock lock = FileLock.tryLock(lock1);
         try {
             FileLock.tryLock(new File(databaseDir, "LOCK"));
             Assert.fail("Can lock a already locked DB");
-        }
-        catch (Exception e) {
-            //expected
+        } catch (Exception e) {
+            // expected
         }
         lock.release();
         assertTrue(lock1.delete());

@@ -17,56 +17,64 @@
  */
 package org.iq80.leveldb.iterator;
 
-import org.iq80.leveldb.impl.InternalKey;
-import org.iq80.leveldb.util.Slice;
-
 import java.io.Closeable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
+import org.iq80.leveldb.impl.InternalKey;
+import org.iq80.leveldb.util.Slice;
 
 /**
- * When ever possible a specific interface implementation is created for speed purpose.
- * see {@link DbIterator} where the same approach is used.
+ * When ever possible a specific interface implementation is created for speed purpose. see {@link
+ * DbIterator} where the same approach is used.
  */
-public final class SeekingIterators
-{
-    private SeekingIterators()
-    {
-        //utility
+public final class SeekingIterators {
+    private SeekingIterators() {
+        // utility
     }
 
     /**
-     * Seeking iterator based on provided sorted list. Unpredictable behavior
-     * will happen if {@code list} is not sorted according to {@code comparator}
+     * Seeking iterator based on provided sorted list. Unpredictable behavior will happen if {@code
+     * list} is not sorted according to {@code comparator}
      */
-    public static <T, K, V> SeekingIterator<K, V> fromSortedList(List<T> list, Function<T, K> keyExtractor, Function<T, V> valueExtractor, Comparator<K> comparator)
-    {
+    public static <T, K, V> SeekingIterator<K, V> fromSortedList(
+            List<T> list,
+            Function<T, K> keyExtractor,
+            Function<T, V> valueExtractor,
+            Comparator<K> comparator) {
         return new SortedCollectionIterator<>(list, keyExtractor, valueExtractor, comparator);
     }
 
-    public static SliceIterator twoLevelSliceIterator(SliceIterator indexIterator, Function<Slice, SeekingIterator<Slice, Slice>> blockFunction, Closeable closeableResources)
-    {
+    public static SliceIterator twoLevelSliceIterator(
+            SliceIterator indexIterator,
+            Function<Slice, SeekingIterator<Slice, Slice>> blockFunction,
+            Closeable closeableResources) {
         return new SliceTwoLevelIterator(indexIterator, blockFunction, closeableResources);
     }
 
-    public static <T> InternalIterator twoLevelInternalIterator(SeekingIterator<InternalKey, T> indexIterator, Function<T, SeekingIterator<InternalKey, Slice>> blockFunction, Closeable closeableResources)
-    {
+    public static <T> InternalIterator twoLevelInternalIterator(
+            SeekingIterator<InternalKey, T> indexIterator,
+            Function<T, SeekingIterator<InternalKey, Slice>> blockFunction,
+            Closeable closeableResources) {
         return new InternalTwoLevelIterator<>(indexIterator, blockFunction, closeableResources);
     }
 
-    private static class InternalTwoLevelIterator<T> extends TwoLevelIterator<T, InternalKey, Slice> implements InternalIterator
-    {
-        InternalTwoLevelIterator(SeekingIterator<InternalKey, T> indexIterator, Function<T, SeekingIterator<InternalKey, Slice>> blockFunction, Closeable closeableResources)
-        {
+    private static class InternalTwoLevelIterator<T> extends TwoLevelIterator<T, InternalKey, Slice>
+            implements InternalIterator {
+        InternalTwoLevelIterator(
+                SeekingIterator<InternalKey, T> indexIterator,
+                Function<T, SeekingIterator<InternalKey, Slice>> blockFunction,
+                Closeable closeableResources) {
             super(indexIterator, blockFunction, closeableResources);
         }
     }
 
-    private static class SliceTwoLevelIterator extends TwoLevelIterator<Slice, Slice, Slice> implements SliceIterator
-    {
-        SliceTwoLevelIterator(SliceIterator indexIterator, Function<Slice, SeekingIterator<Slice, Slice>> blockFunction, Closeable closeableResources)
-        {
+    private static class SliceTwoLevelIterator extends TwoLevelIterator<Slice, Slice, Slice>
+            implements SliceIterator {
+        SliceTwoLevelIterator(
+                SliceIterator indexIterator,
+                Function<Slice, SeekingIterator<Slice, Slice>> blockFunction,
+                Closeable closeableResources) {
             super(indexIterator, blockFunction, closeableResources);
         }
     }

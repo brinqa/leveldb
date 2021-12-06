@@ -17,26 +17,22 @@
  */
 package org.iq80.leveldb.memenv;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import org.iq80.leveldb.env.SequentialFile;
 import org.iq80.leveldb.util.SliceOutput;
 
-import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-
-class MemSequentialFile implements SequentialFile
-{
+class MemSequentialFile implements SequentialFile {
     private final FileState fileState;
     private boolean closed;
     private int index;
 
-    public MemSequentialFile(FileState fileState)
-    {
+    public MemSequentialFile(FileState fileState) {
         this.fileState = fileState;
     }
 
     @Override
-    public void skip(long n) throws IOException
-    {
+    public void skip(long n) throws IOException {
         if (index > fileState.length()) {
             throw new IOException("File position " + index + " is greater than file size");
         }
@@ -48,8 +44,7 @@ class MemSequentialFile implements SequentialFile
     }
 
     @Override
-    public int read(int atMost, SliceOutput destination) throws IOException
-    {
+    public int read(int atMost, SliceOutput destination) throws IOException {
         if (closed) {
             throw new ClosedChannelException();
         }
@@ -63,8 +58,7 @@ class MemSequentialFile implements SequentialFile
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         closed = true;
     }
 }

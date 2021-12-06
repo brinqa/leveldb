@@ -17,14 +17,20 @@
  */
 package org.iq80.leveldb.impl;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.RandomInputFile;
 import org.iq80.leveldb.iterator.InternalTableIterator;
 import org.iq80.leveldb.table.BlockHandleSliceWeigher;
 import org.iq80.leveldb.table.CacheKey;
@@ -35,95 +41,97 @@ import org.iq80.leveldb.table.UserComparator;
 import org.iq80.leveldb.util.Closeables;
 import org.iq80.leveldb.util.ILRUCache;
 import org.iq80.leveldb.util.LRUCache;
-import org.iq80.leveldb.env.RandomInputFile;
 import org.iq80.leveldb.util.Slice;
 
-import org.iq80.leveldb.env.File;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-
-import static java.util.Objects.requireNonNull;
-
-public class TableCache
-{
+public class TableCache {
     private final LoadingCache<Long, TableAndFile> cache;
     private final ILRUCache<CacheKey, Slice> blockCache;
 
-    public TableCache(final File databaseDir,
-                      int tableCacheSize,
-                      final UserComparator userComparator,
-                      final Options options, Env env)
-    {
+    public TableCache(
+            final File databaseDir,
+            int tableCacheSize,
+            final UserComparator userComparator,
+            final Options options,
+            Env env) {
         requireNonNull(databaseDir, "databaseName is null");
-        blockCache = options.cacheSize() == 0 ? null : LRUCache.createCache((int) options.cacheSize(), new BlockHandleSliceWeigher());
-        cache = CacheBuilder.newBuilder()
-                .maximumSize(tableCacheSize)
-                .removalListener((RemovalListener<Long, TableAndFile>) notification -> {
-                    final TableAndFile value = notification.getValue();
-                    if (value != null) {
-                        final Table table = value.getTable();
-                        try {
-                            //end user is required to close resources/iterators
-                            //no need to rely on GC to collect files even for MM Files.
-                            table.close();
-                        }
-                        catch (IOException e) {
-                            throw new DBException(e);
-                        }
-                    }
-                })
-                .build(new CacheLoader<Long, TableAndFile>()
-                {
-                    @Override
-                    public TableAndFile load(Long fileNumber)
-                            throws IOException
-                    {
-                        return new TableAndFile(databaseDir, fileNumber, userComparator, options, blockCache, env);
-                    }
-                });
+        blockCache =
+                options.cacheSize() == 0
+                        ? null
+                        : LRUCache.createCache(
+                                (int) options.cacheSize(), new BlockHandleSliceWeigher());
+        cache =
+                CacheBuilder.newBuilder()
+                        .maximumSize(tableCacheSize)
+                        .removalListener(
+                                (RemovalListener<Long, TableAndFile>)
+                                        notification -> {
+                                            final TableAndFile value = notification.getValue();
+                                            if (value != null) {
+                                                final Table table = value.getTable();
+                                                try {
+                                                    // end user is required to close
+                                                    // resources/iterators
+                                                    // no need to rely on GC to collect files even
+                                                    // for MM Files.
+                                                    table.close();
+                                                } catch (IOException e) {
+                                                    throw new DBException(e);
+                                                }
+                                            }
+                                        })
+                        .build(
+                                new CacheLoader<Long, TableAndFile>() {
+                                    @Override
+                                    public TableAndFile load(Long fileNumber) throws IOException {
+                                        return new TableAndFile(
+                                                databaseDir,
+                                                fileNumber,
+                                                userComparator,
+                                                options,
+                                                blockCache,
+                                                env);
+                                    }
+                                });
     }
 
-    public InternalTableIterator newIterator(FileMetaData file, ReadOptions options) throws IOException
-    {
+    public InternalTableIterator newIterator(FileMetaData file, ReadOptions options)
+            throws IOException {
         return newIterator(file.getNumber(), options);
     }
 
-    public InternalTableIterator newIterator(long number, ReadOptions options) throws IOException
-    {
-        try (Table table = getTable(number)) { //same as release
-            return new InternalTableIterator(table.iterator(options)); //make its own retain
+    public InternalTableIterator newIterator(long number, ReadOptions options) throws IOException {
+        try (Table table = getTable(number)) { // same as release
+            return new InternalTableIterator(table.iterator(options)); // make its own retain
         }
     }
 
-    public <T> T get(ReadOptions options, Slice key, FileMetaData fileMetaData, KeyValueFunction<T> resultBuilder)
-    {
-        try (Table table = getTable(fileMetaData.getNumber())) { //same as release
+    public <T> T get(
+            ReadOptions options,
+            Slice key,
+            FileMetaData fileMetaData,
+            KeyValueFunction<T> resultBuilder) {
+        try (Table table = getTable(fileMetaData.getNumber())) { // same as release
             return table.internalGet(options, key, resultBuilder);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new DBException(e);
         }
     }
 
-    public long getApproximateOffsetOf(FileMetaData file, Slice key)
-    {
+    public long getApproximateOffsetOf(FileMetaData file, Slice key) {
         try (Table table = getTable(file.getNumber())) {
             return table.getApproximateOffsetOf(key);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new DBException(e);
         }
     }
 
-    private Table getTable(long number)
-    {
+    private Table getTable(long number) {
         Table table;
         try {
             do {
                 table = cache.get(number).getTable();
             } while (!table.retain());
-        }
-        catch (ExecutionException e) {
+        } catch (ExecutionException e) {
             Throwable cause = e;
             if (e.getCause() != null) {
                 cause = e.getCause();
@@ -133,45 +141,51 @@ public class TableCache
         return table;
     }
 
-    public void close()
-    {
+    public void close() {
         invalidateAll();
     }
 
-    /**
-     * Discards all entries in table and block (if any).
-     */
-    public void invalidateAll()
-    {
+    /** Discards all entries in table and block (if any). */
+    public void invalidateAll() {
         if (blockCache != null) {
             blockCache.invalidateAll();
         }
         cache.invalidateAll();
     }
 
-    public void evict(long number)
-    {
+    public void evict(long number) {
         cache.invalidate(number);
     }
 
-    private static final class TableAndFile
-    {
+    private static final class TableAndFile {
         private final Table table;
 
-        private TableAndFile(File databaseDir, long fileNumber, UserComparator userComparator, Options options, ILRUCache<CacheKey, Slice> blockCache, Env env)
-                throws IOException
-        {
+        private TableAndFile(
+                File databaseDir,
+                long fileNumber,
+                UserComparator userComparator,
+                Options options,
+                ILRUCache<CacheKey, Slice> blockCache,
+                Env env)
+                throws IOException {
             final File tableFile = tableFileName(databaseDir, fileNumber);
             RandomInputFile source = env.newRandomAccessFile(tableFile);
-            table = Closeables.wrapResource(() -> {
-                final FilterPolicy filterPolicy = (FilterPolicy) options.filterPolicy();
-                return new Table(source, userComparator,
-                        options.paranoidChecks(), blockCache, filterPolicy);
-            }, source);
+            table =
+                    Closeables.wrapResource(
+                            () -> {
+                                final FilterPolicy filterPolicy =
+                                        (FilterPolicy) options.filterPolicy();
+                                return new Table(
+                                        source,
+                                        userComparator,
+                                        options.paranoidChecks(),
+                                        blockCache,
+                                        filterPolicy);
+                            },
+                            source);
         }
 
-        private File tableFileName(File databaseDir, long fileNumber)
-        {
+        private File tableFileName(File databaseDir, long fileNumber) {
             final String tableFileName = Filename.tableFileName(fileNumber);
             File tableFile = databaseDir.child(tableFileName);
             if (!tableFile.canRead()) {
@@ -185,14 +199,12 @@ public class TableCache
             return tableFile;
         }
 
-        public Table getTable()
-        {
+        public Table getTable() {
             return table;
         }
     }
 
-    public long getApproximateMemoryUsage()
-    {
+    public long getApproximateMemoryUsage() {
         return blockCache.getApproximateMemoryUsage();
     }
 }

@@ -18,31 +18,24 @@
 
 package org.iq80.leveldb.util;
 
-/**
- * @author Honore Vasconcelos
- */
-public final class Hash
-{
-    private Hash()
-    {
-    }
+/** @author Honore Vasconcelos */
+public final class Hash {
+    private Hash() {}
 
-    public static int hash(byte[] data, int seed)
-    {
+    public static int hash(byte[] data, int seed) {
         return hash(data, 0, data.length, seed);
     }
 
     /**
      * Partial array hash that start at offset and with len size.
      *
-     * @param data   full data
+     * @param data full data
      * @param offset data start offset
-     * @param len    length of data
-     * @param seed   hash seed
+     * @param len length of data
+     * @param seed hash seed
      * @return hash (sign has no meaning)
      */
-    public static int hash(byte[] data, int offset, int len, int seed)
-    {
+    public static int hash(byte[] data, int offset, int len, int seed) {
         final int endIdx = len + offset;
         // Similar to murmur hash
         int m = 0xc6a4a793;
@@ -64,10 +57,10 @@ public final class Hash
         switch (remaining) {
             case 3:
                 h += (data[idx + 2] & 0xff) << 16;
-                //FALLTHROUGH INTENDED: DO NOT PUT BREAK
+                // FALLTHROUGH INTENDED: DO NOT PUT BREAK
             case 2:
                 h += (data[idx + 1] & 0xff) << 8;
-                //FALLTHROUGH INTENDED: DO NOT PUT BREAK
+                // FALLTHROUGH INTENDED: DO NOT PUT BREAK
             case 1:
                 h += data[idx] & 0xff;
                 h *= m;
@@ -77,11 +70,10 @@ public final class Hash
         return h;
     }
 
-    private static int byteToInt(byte[] data, final int index)
-    {
-        return (data[index] & 0xff) |
-                (data[index + 1] & 0xff) << 8 |
-                (data[index + 2] & 0xff) << 16 |
-                (data[index + 3] & 0xff) << 24;
+    private static int byteToInt(byte[] data, final int index) {
+        return (data[index] & 0xff)
+                | (data[index + 1] & 0xff) << 8
+                | (data[index + 2] & 0xff) << 16
+                | (data[index + 3] & 0xff) << 24;
     }
 }

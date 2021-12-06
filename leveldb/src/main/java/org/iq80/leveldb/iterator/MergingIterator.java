@@ -17,35 +17,34 @@
  */
 package org.iq80.leveldb.iterator;
 
-import org.iq80.leveldb.impl.InternalKey;
-import org.iq80.leveldb.util.Closeables;
-import org.iq80.leveldb.util.Slice;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.Function;
+import org.iq80.leveldb.impl.InternalKey;
+import org.iq80.leveldb.util.Closeables;
+import org.iq80.leveldb.util.Slice;
 
 public final class MergingIterator extends ASeekingIterator<InternalKey, Slice>
-        implements InternalIterator
-{
+        implements InternalIterator {
     private final List<InternalIterator> iterators;
     private final Comparator<InternalKey> keyComparator;
     private final Comparator<InternalIterator> iteratorComparator;
     private PriorityQueue<InternalIterator> queue;
     private InternalIterator current;
 
-    public MergingIterator(List<InternalIterator> iterators, Comparator<InternalKey> comparator)
-    {
+    public MergingIterator(List<InternalIterator> iterators, Comparator<InternalKey> comparator) {
         this.keyComparator = comparator;
         this.iteratorComparator = (o1, o2) -> keyComparator.compare(o1.key(), o2.key());
         this.iterators = iterators;
     }
 
-    private void rebuildQueue(boolean reverse, Function<InternalIterator, Boolean> func)
-    {
-        this.queue = new PriorityQueue<>(iterators.size(), reverse ? iteratorComparator.reversed() : iteratorComparator);
+    private void rebuildQueue(boolean reverse, Function<InternalIterator, Boolean> func) {
+        this.queue =
+                new PriorityQueue<>(
+                        iterators.size(),
+                        reverse ? iteratorComparator.reversed() : iteratorComparator);
         for (InternalIterator iterator : iterators) {
             if (func.apply(iterator)) {
                 queue.add(iterator);
@@ -54,35 +53,37 @@ public final class MergingIterator extends ASeekingIterator<InternalKey, Slice>
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         rebuildQueue(false, SeekingIterator::seekToFirst);
         current = queue.poll();
         return current != null;
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         rebuildQueue(true, SeekingIterator::seekToLast);
         current = queue.poll();
         return current != null;
     }
 
     @Override
-    protected boolean internalSeek(InternalKey targetKey)
-    {
+    protected boolean internalSeek(InternalKey targetKey) {
         rebuildQueue(false, itr -> itr.seek(targetKey));
         current = queue.poll();
         return current != null;
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         if (switchDirection) {
             InternalKey key = key();
-            rebuildQueue(false, iter -> iter != current && iter.seek(key) && (keyComparator.compare(key, iter.key()) != 0 || iter.next()));
+            rebuildQueue(
+                    false,
+                    iter ->
+                            iter != current
+                                    && iter.seek(key)
+                                    && (keyComparator.compare(key, iter.key()) != 0
+                                            || iter.next()));
         }
         if (current.next()) {
             queue.add(current);
@@ -92,22 +93,21 @@ public final class MergingIterator extends ASeekingIterator<InternalKey, Slice>
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         if (switchDirection) {
             InternalKey key = key();
-            rebuildQueue(true, iter -> {
-                if (iter.seek(key)) {
-                    // Child is at first entry >= key().  Step back one to be < key()
-                    return iter.prev();
-                }
-                else {
-                    // Child has no entries >= key().  Position at last entry.
-                    return iter.seekToLast();
-                }
-            });
-        }
-        else {
+            rebuildQueue(
+                    true,
+                    iter -> {
+                        if (iter.seek(key)) {
+                            // Child is at first entry >= key().  Step back one to be < key()
+                            return iter.prev();
+                        } else {
+                            // Child has no entries >= key().  Position at last entry.
+                            return iter.seekToLast();
+                        }
+                    });
+        } else {
             if (current.prev()) {
                 queue.add(current);
             }
@@ -117,20 +117,17 @@ public final class MergingIterator extends ASeekingIterator<InternalKey, Slice>
     }
 
     @Override
-    protected InternalKey internalKey()
-    {
+    protected InternalKey internalKey() {
         return current.key();
     }
 
     @Override
-    protected Slice internalValue()
-    {
+    protected Slice internalValue() {
         return current.value();
     }
 
     @Override
-    public void internalClose() throws IOException
-    {
+    public void internalClose() throws IOException {
         Closeables.closeAll(iterators);
     }
 }

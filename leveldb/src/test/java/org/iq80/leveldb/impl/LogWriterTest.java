@@ -17,25 +17,21 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.SliceOutput;
-import org.iq80.leveldb.env.WritableFile;
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.SliceOutput;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.fail;
-
-public class LogWriterTest
-{
+public class LogWriterTest {
     @Test
-    public void testLogRecordBounds()
-            throws Exception
-    {
+    public void testLogRecordBounds() throws Exception {
         StringSink open = new StringSink();
 
         int recordSize = LogConstants.BLOCK_SIZE - LogConstants.HEADER_SIZE;
@@ -47,10 +43,13 @@ public class LogWriterTest
 
         LogMonitor logMonitor = new AssertNoCorruptionLogMonitor();
 
-        try (SequentialFile in = new SequentialBytes(new ByteArrayInputStream(open.sb.toByteArray()))) {
+        try (SequentialFile in =
+                new SequentialBytes(new ByteArrayInputStream(open.sb.toByteArray()))) {
             LogReader logReader = new LogReader(in, logMonitor, true, 0);
             int count = 0;
-            for (Slice slice = logReader.readRecord(); slice != null; slice = logReader.readRecord()) {
+            for (Slice slice = logReader.readRecord();
+                    slice != null;
+                    slice = logReader.readRecord()) {
                 assertEquals(slice.length(), recordSize);
                 count++;
             }
@@ -58,72 +57,59 @@ public class LogWriterTest
         }
     }
 
-    private static class StringSink implements WritableFile
-    {
+    private static class StringSink implements WritableFile {
         private ByteArrayOutputStream sb = new ByteArrayOutputStream();
 
         byte[] content;
 
         @Override
-        public void append(Slice data) throws IOException
-        {
+        public void append(Slice data) throws IOException {
             sb.write(data.getBytes());
         }
 
         @Override
-        public void force()
-        {
+        public void force() {
             content = sb.toByteArray();
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             content = sb.toByteArray();
             sb.close();
         }
     }
 
-    private static class SequentialBytes implements SequentialFile
-    {
+    private static class SequentialBytes implements SequentialFile {
         private ByteArrayInputStream in;
 
-        public SequentialBytes(ByteArrayInputStream in)
-        {
+        public SequentialBytes(ByteArrayInputStream in) {
             this.in = in;
         }
 
         @Override
-        public void skip(long n)
-        {
-           assertEquals(in.skip(n), n);
+        public void skip(long n) {
+            assertEquals(in.skip(n), n);
         }
 
         @Override
-        public int read(int atMost, SliceOutput destination) throws IOException
-        {
+        public int read(int atMost, SliceOutput destination) throws IOException {
             return destination.writeBytes(in, atMost);
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             in.close();
         }
     }
 
-    private static class AssertNoCorruptionLogMonitor
-            implements LogMonitor
-    {
+    private static class AssertNoCorruptionLogMonitor implements LogMonitor {
         @Override
-        public void corruption(long bytes, String reason)
-        {
+        public void corruption(long bytes, String reason) {
             fail("corruption at " + bytes + " reason: " + reason);
         }
 
         @Override
-        public void corruption(long bytes, Throwable reason)
-        {
+        public void corruption(long bytes, Throwable reason) {
             fail("corruption at " + bytes + " reason: " + reason);
         }
     }

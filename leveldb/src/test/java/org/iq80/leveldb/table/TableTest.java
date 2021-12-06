@@ -17,7 +17,30 @@
  */
 package org.iq80.leveldb.table;
 
+import static java.util.Arrays.asList;
+import static org.iq80.leveldb.impl.SequenceNumber.MAX_SEQUENCE_NUMBER;
+import static org.iq80.leveldb.iterator.IteratorTestUtils.entry;
+import static org.iq80.leveldb.util.SizeOf.SIZE_OF_INT;
+import static org.iq80.leveldb.util.TestUtils.asciiToSlice;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.collect.Lists;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.Function;
 import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.DBComparator;
 import org.iq80.leveldb.Options;
@@ -36,92 +59,65 @@ import org.iq80.leveldb.impl.ValueType;
 import org.iq80.leveldb.iterator.SeekingDBIteratorAdapter;
 import org.iq80.leveldb.iterator.SeekingIterator;
 import org.iq80.leveldb.util.Closeables;
+import org.iq80.leveldb.util.Compression;
 import org.iq80.leveldb.util.ILRUCache;
 import org.iq80.leveldb.util.LRUCache;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
-import org.iq80.leveldb.util.Snappy;
 import org.iq80.leveldb.util.TestUtils;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.function.Function;
-
-import static java.util.Arrays.asList;
-import static org.iq80.leveldb.impl.SequenceNumber.MAX_SEQUENCE_NUMBER;
-import static org.iq80.leveldb.iterator.IteratorTestUtils.entry;
-import static org.iq80.leveldb.util.SizeOf.SIZE_OF_INT;
-import static org.iq80.leveldb.util.TestUtils.asciiToSlice;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
-
-public abstract class TableTest
-{
+public abstract class TableTest {
     private Env defaultEnv;
     private File file;
 
-    private Table createTable(File file, Comparator<Slice> comparator, boolean verifyChecksums, FilterPolicy filterPolicy)
-        throws Exception
-    {
+    private Table createTable(File file, Comparator<Slice> comparator) throws Exception {
         RandomInputFile open = defaultEnv.newRandomAccessFile(file);
         try {
-            return new Table(open, comparator, verifyChecksums, LRUCache.createCache(8 << 5, new BlockHandleSliceWeigher()), filterPolicy);
-        }
-        catch (Exception e) {
+            return new Table(
+                    open,
+                    comparator,
+                    true,
+                    LRUCache.createCache(8 << 5, new BlockHandleSliceWeigher()),
+                    null);
+        } catch (Exception e) {
             Closeables.closeQuietly(open);
             throw e;
         }
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testEmptyFile()
-            throws Exception
-    {
-        createTable(file, new BytewiseComparator(), true, null).close();
+    public void testEmptyFile() throws Exception {
+        createTable(file, new BytewiseComparator()).close();
     }
 
     @Test
-    public void testEmptyBlock()
-            throws Exception
-    {
+    public void testEmptyBlock() throws Exception {
         tableTest(Integer.MAX_VALUE, Integer.MAX_VALUE);
     }
 
     @Test
-    public void testSingleEntrySingleBlock()
-            throws Exception
-    {
-        tableTest(Integer.MAX_VALUE, Integer.MAX_VALUE,
+    public void testSingleEntrySingleBlock() throws Exception {
+        tableTest(
+                Integer.MAX_VALUE,
+                Integer.MAX_VALUE,
                 BlockHelper.createBlockEntry("name", "dain sundstrom"));
     }
 
     @Test
-    public void testMultipleEntriesWithSingleBlock()
-            throws Exception
-    {
-        List<BlockEntry> entries = asList(
-                BlockHelper.createBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
-                BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
-                BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
-                BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
-                BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
-                BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
+    public void testMultipleEntriesWithSingleBlock() throws Exception {
+        List<BlockEntry> entries =
+                asList(
+                        BlockHelper.createBlockEntry(
+                                "beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                        BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
+                        BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                        BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
+                        BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
+                        BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
 
         for (int i = 1; i < entries.size(); i++) {
             tableTest(Integer.MAX_VALUE, i, entries);
@@ -129,27 +125,29 @@ public abstract class TableTest
     }
 
     @Test
-    public void testMultipleEntriesWithMultipleBlock()
-            throws Exception
-    {
-        List<BlockEntry> entries = asList(
-                BlockHelper.createBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
-                BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
-                BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
-                BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
-                BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
-                BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
+    public void testMultipleEntriesWithMultipleBlock() throws Exception {
+        List<BlockEntry> entries =
+                asList(
+                        BlockHelper.createBlockEntry(
+                                "beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                        BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
+                        BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                        BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
+                        BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
+                        BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
 
         // one entry per block
         tableTest(1, Integer.MAX_VALUE, entries);
 
         // about 3 blocks
-        tableTest(BlockHelper.estimateBlockSize(Integer.MAX_VALUE, entries) / 3, Integer.MAX_VALUE, entries);
+        tableTest(
+                BlockHelper.estimateBlockSize(Integer.MAX_VALUE, entries) / 3,
+                Integer.MAX_VALUE,
+                entries);
     }
 
     @Test
-    public void testZeroRestartPointsInBlock()
-    {
+    public void testZeroRestartPointsInBlock() {
         Block entries = new Block(Slices.allocate(SIZE_OF_INT), new BytewiseComparator());
 
         try (BlockIterator iterator = entries.iterator()) {
@@ -164,59 +162,50 @@ public abstract class TableTest
         }
     }
 
-    private static final class KVMap
-            extends ConcurrentSkipListMap<Slice, Slice>
-    {
-        KVMap(UserComparator useComparator)
-        {
+    private static final class KVMap extends ConcurrentSkipListMap<Slice, Slice> {
+        KVMap(UserComparator useComparator) {
             super(new STLLessThan(useComparator));
         }
 
-        void add(String key, Slice value)
-        {
+        void add(String key, Slice value) {
             put(asciiToSlice(key), value);
         }
 
-        KVIter iter()
-        {
+        KVIter iter() {
             ArrayList<Entry<Slice, Slice>> entries = Lists.newArrayList(entrySet());
             return new KVIter(entries);
         }
 
-        //avoid using an implementation we are testing
-        class KVIter
-        {
+        // avoid using an implementation we are testing
+        class KVIter {
             private final List<Entry<Slice, Slice>> entries;
             private int index = -1;
 
-            KVIter(List<Entry<Slice, Slice>> entries)
-            {
+            KVIter(List<Entry<Slice, Slice>> entries) {
                 this.entries = entries;
             }
 
-            Optional<Entry<Slice, Slice>> next()
-            {
+            Optional<Entry<Slice, Slice>> next() {
                 if (index < entries.size()) {
                     index++;
                 }
                 return index < entries.size() ? Optional.of(entries.get(index)) : Optional.empty();
             }
 
-            Optional<Entry<Slice, Slice>> prev()
-            {
+            Optional<Entry<Slice, Slice>> prev() {
                 if (index >= 0) {
                     index--;
                 }
                 return index >= 0 ? Optional.of(entries.get(index)) : Optional.empty();
             }
 
-            Optional<Entry<Slice, Slice>> entry()
-            {
-                return index >= 0 && index < entries.size() ? Optional.of(entries.get(index)) : Optional.empty();
+            Optional<Entry<Slice, Slice>> entry() {
+                return index >= 0 && index < entries.size()
+                        ? Optional.of(entries.get(index))
+                        : Optional.empty();
             }
 
-            KVIter seek(Slice key)
-            {
+            KVIter seek(Slice key) {
                 index = -1;
                 Optional<Entry<Slice, Slice>> next = next();
                 while (next.isPresent() && comparator().compare(next.get().getKey(), key) < 0) {
@@ -225,12 +214,10 @@ public abstract class TableTest
                 return this;
             }
 
-            public Optional<Entry<Slice, Slice>> seekToLast()
-            {
+            public Optional<Entry<Slice, Slice>> seekToLast() {
                 if (entries.isEmpty()) {
                     return Optional.empty();
-                }
-                else {
+                } else {
                     index = entries.size() - 1;
                     return Optional.of(entries.get(index));
                 }
@@ -238,26 +225,21 @@ public abstract class TableTest
         }
     }
 
-    private static class STLLessThan
-            implements Comparator<Slice>
-    {
-        private UserComparator useComparator;
+    private static class STLLessThan implements Comparator<Slice> {
+        private final UserComparator useComparator;
 
-        public STLLessThan(UserComparator useComparator)
-        {
+        public STLLessThan(UserComparator useComparator) {
             this.useComparator = useComparator;
         }
 
         @Override
-        public int compare(Slice o1, Slice o2)
-        {
+        public int compare(Slice o1, Slice o2) {
             return useComparator.compare(o1, o2);
         }
     }
 
     @Test
-    public void testTableApproximateOffsetOfPlain() throws Exception
-    {
+    public void testTableApproximateOffsetOfPlain() throws Exception {
         TableConstructor c = new TableConstructor(new BytewiseComparator());
         c.add("k01", "hello");
         c.add("k02", "hello2");
@@ -286,9 +268,8 @@ public abstract class TableTest
     }
 
     @Test
-    public void testTableTestApproximateOffsetOfCompressed() throws Exception
-    {
-        if (!Snappy.available()) {
+    public void testTableTestApproximateOffsetOfCompressed() throws Exception {
+        if (!Compression.available()) {
             System.out.println("skipping compression tests");
             return;
         }
@@ -302,12 +283,12 @@ public abstract class TableTest
 
         Options options = new Options();
         options.blockSize(1024);
-        options.compressionType(CompressionType.SNAPPY);
+        options.compressionType(CompressionType.LZ4);
         c.finish(options, defaultEnv);
 
         // Expected upper and lower bounds of space used by compressible strings.
-        int kSlop = 1000;  // Compressor effectiveness varies.
-        int expected = 2500;  // 10000 * compression ratio (0.25)
+        int kSlop = 1000; // Compressor effectiveness varies.
+        int expected = 2500; // 10000 * compression ratio (0.25)
         int minZ = expected - kSlop;
         int maxZ = expected + kSlop;
 
@@ -321,68 +302,58 @@ public abstract class TableTest
         assertBetween(c.approximateOffsetOf("xyz"), 2 * minZ, 2 * maxZ);
     }
 
-    static void assertBetween(long val, long low, long high)
-    {
-        assertTrue((val >= low) && (val <= high),
+    static void assertBetween(long val, long low, long high) {
+        assertTrue(
+                (val >= low) && (val <= high),
                 String.format("Value %s is not in range [%s, %s]", val, low, high));
     }
 
-    private abstract static class Constructor
-            implements AutoCloseable
-    {
+    private abstract static class Constructor implements AutoCloseable {
         private final KVMap kvMap;
         private final UserComparator comparator;
 
-        public Constructor(final UserComparator comparator)
-        {
+        public Constructor(final UserComparator comparator) {
             this.comparator = comparator;
             this.kvMap = new KVMap(this.comparator);
         }
 
-        void add(Slice key, Slice value)
-        {
+        void add(Slice key, Slice value) {
             kvMap.put(key, value);
         }
 
-        void add(String key, Slice value)
-        {
+        void add(String key, Slice value) {
             kvMap.put(asciiToSlice(key), value);
         }
 
-        void add(String key, String value)
-        {
+        void add(String key, String value) {
             add(key, asciiToSlice(value));
         }
 
-        public final KVMap finish(Options options, Env env) throws IOException
-        {
+        public final KVMap finish(Options options, Env env) throws IOException {
             finish(options, env, comparator, kvMap);
             return kvMap;
         }
 
         @Override
-        public void close() throws Exception
-        {
-        }
+        public void close() throws Exception {}
 
-        protected abstract void finish(Options options, Env env, UserComparator comparator, KVMap kvMap) throws IOException;
+        protected abstract void finish(
+                Options options, Env env, UserComparator comparator, KVMap kvMap)
+                throws IOException;
 
         public abstract SeekingIterator<Slice, Slice> iterator();
     }
 
-    public static class TableConstructor
-            extends Constructor
-    {
+    public static class TableConstructor extends Constructor {
         private Table table;
 
-        public TableConstructor(UserComparator comparator)
-        {
+        public TableConstructor(UserComparator comparator) {
             super(comparator);
         }
 
         @Override
-        protected void finish(Options options, Env env, UserComparator comp, KVMap data) throws IOException
-        {
+        protected void finish(Options options, Env env, UserComparator comp, KVMap data)
+                throws IOException {
             StringSink sink = new StringSink();
             TableBuilder builder = new TableBuilder(options, sink, comp);
 
@@ -396,175 +367,169 @@ public abstract class TableTest
 
             // Open the table
             StringSource source = new StringSource(sink.content);
-            ILRUCache<CacheKey, Slice> blockCache = LRUCache.createCache(options.cacheSize() > 0 ? (int) options.cacheSize() : 8 << 20, new BlockHandleSliceWeigher());
-            table = new Table(source, comp, options.paranoidChecks(), blockCache, (FilterPolicy) options.filterPolicy());
+            ILRUCache<CacheKey, Slice> blockCache =
+                    LRUCache.createCache(
+                            options.cacheSize() > 0 ? (int) options.cacheSize() : 8 << 20,
+                            new BlockHandleSliceWeigher());
+            table =
+                    new Table(
+                            source,
+                            comp,
+                            options.paranoidChecks(),
+                            blockCache,
+                            (FilterPolicy) options.filterPolicy());
         }
 
-        public long approximateOffsetOf(String key)
-        {
+        public long approximateOffsetOf(String key) {
             return table.getApproximateOffsetOf(asciiToSlice(key));
         }
 
         @Override
-        public SeekingIterator<Slice, Slice> iterator()
-        {
+        public SeekingIterator<Slice, Slice> iterator() {
             return table.iterator(new ReadOptions());
         }
     }
 
     @DataProvider(name = "testArgs")
-    public Object[][] testArgsProvider()
-    {
+    public Object[][] testArgsProvider() {
         try {
             final ReverseDBComparator reverse = new ReverseDBComparator();
             return new Object[][] {
-                    {newHarness(TableConstructor.class, null, 16)},
-                    {newHarness(TableConstructor.class, null, 1)},
-                    {newHarness(TableConstructor.class, null, 1024)},
-                    {newHarness(TableConstructor.class, reverse, 16)},
-                    {newHarness(TableConstructor.class, reverse, 1)},
-                    {newHarness(TableConstructor.class, reverse, 1024)},
+                {newHarness(TableConstructor.class, null, 16)},
+                {newHarness(TableConstructor.class, null, 1)},
+                {newHarness(TableConstructor.class, null, 1024)},
+                {newHarness(TableConstructor.class, reverse, 16)},
+                {newHarness(TableConstructor.class, reverse, 1)},
+                {newHarness(TableConstructor.class, reverse, 1024)},
+                {newHarness(BlockConstructor.class, null, 16)},
+                {newHarness(BlockConstructor.class, null, 1)},
+                {newHarness(BlockConstructor.class, null, 1014)},
+                {newHarness(BlockConstructor.class, reverse, 16)},
+                {newHarness(BlockConstructor.class, reverse, 1)},
+                {newHarness(BlockConstructor.class, reverse, 1024)},
 
-                    {newHarness(BlockConstructor.class, null, 16)},
-                    {newHarness(BlockConstructor.class, null, 1)},
-                    {newHarness(BlockConstructor.class, null, 1014)},
-                    {newHarness(BlockConstructor.class, reverse, 16)},
-                    {newHarness(BlockConstructor.class, reverse, 1)},
-                    {newHarness(BlockConstructor.class, reverse, 1024)},
-
-                    //TODO ported from original but need to be moved away. they don't exactly belong in current package!
-                    {newHarness(MemTableConstructor.class, null, 16)},
-                    {newHarness(MemTableConstructor.class, reverse, 16)},
-
-                    {newHarness(DbConstructor.class, null, 16)},
-                    {newHarness(DbConstructor.class, reverse, 16)},
+                // TODO ported from original but need to be moved away. they don't exactly belong in
+                // current package!
+                {newHarness(MemTableConstructor.class, null, 16)},
+                {newHarness(MemTableConstructor.class, reverse, 16)},
+                {newHarness(DbConstructor.class, null, 16)},
+                {newHarness(DbConstructor.class, reverse, 16)},
             };
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static Harness newHarness(Class<? extends Constructor> cls, DBComparator dbComparator, int restartInterval) throws Exception
-    {
+    private static Harness newHarness(
+            Class<? extends Constructor> cls, DBComparator dbComparator, int restartInterval)
+            throws Exception {
         Random rnd = new Random(301 + System.nanoTime());
         return new Harness(rnd, dbComparator, cls, restartInterval);
     }
 
     @Test(dataProvider = "testArgs")
-    public void testEmpty(Harness harness) throws Exception
-    {
+    public void testEmpty(Harness harness) throws Exception {
         try {
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test(dataProvider = "testArgs")
-    public void testSimpleEmptyKey(Harness harness) throws Exception
-    {
+    public void testSimpleEmptyKey(Harness harness) throws Exception {
         try {
             harness.add(Slices.EMPTY_SLICE, asciiToSlice("v"));
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test(dataProvider = "testArgs")
-    public void testSimpleSingle(Harness harness) throws Exception
-    {
+    public void testSimpleSingle(Harness harness) throws Exception {
         try {
             harness.add(asciiToSlice("abc"), asciiToSlice("v"));
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test(dataProvider = "testArgs")
-    public void testSimpleMulti(Harness harness) throws Exception
-    {
+    public void testSimpleMulti(Harness harness) throws Exception {
         try {
             harness.add(asciiToSlice("abc"), asciiToSlice("v"));
             harness.add(asciiToSlice("abcd"), asciiToSlice("v"));
             harness.add(asciiToSlice("ac"), asciiToSlice("v2"));
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test(dataProvider = "testArgs")
-    public void testSimpleSpecialKey(Harness harness) throws Exception
-    {
+    public void testSimpleSpecialKey(Harness harness) throws Exception {
         try {
             harness.add(Slices.wrappedBuffer(new byte[] {-1, -1}), asciiToSlice("v3"));
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test(dataProvider = "testArgs")
-    public void testRandomized(Harness harness) throws Exception
-    {
+    public void testRandomized(Harness harness) throws Exception {
         try {
             Random rnd = harness.getRnd();
-            for (int numEntries = 0; numEntries < 2000;
-                 numEntries += (numEntries < 50 ? 1 : 200)) {
+            for (int numEntries = 0; numEntries < 2000; numEntries += (numEntries < 50 ? 1 : 200)) {
                 if ((numEntries % 10) == 0) {
-                    //System.err.println(String.format("case %s: numEntries = %d", harness, numEntries));
+                    System.err.printf("case %s: numEntries = %d%n", harness, numEntries);
                 }
                 for (int e = 0; e < numEntries; e++) {
-                    harness.add(new Slice(TestUtils.randomKey(rnd, harness.getRandomSkewed(4))),
+                    harness.add(
+                            new Slice(TestUtils.randomKey(rnd, harness.getRandomSkewed(4))),
                             TestUtils.randomString(rnd, harness.getRandomSkewed(5)));
                 }
             }
             harness.test(defaultEnv);
-        }
-        finally {
+        } finally {
             harness.close();
         }
     }
 
     @Test
-    public void testRandomizedLongDB() throws Exception
-    {
+    public void testRandomizedLongDB() throws Exception {
         Random rnd = new Random(301);
         try (Harness<DbConstructor> harness = new Harness<>(rnd, null, DbConstructor.class, 16)) {
             int numEntries = 100000;
             for (int e = 0; e < numEntries; e++) {
-                harness.add(new Slice(TestUtils.randomKey(rnd, harness.getRandomSkewed(4))),
+                harness.add(
+                        new Slice(TestUtils.randomKey(rnd, harness.getRandomSkewed(4))),
                         TestUtils.randomString(rnd, harness.getRandomSkewed(5)));
             }
             harness.test(defaultEnv);
             // We must have created enough data to force merging
             int files = 0;
             for (int level = 0; level < DbConstants.NUM_LEVELS; level++) {
-                files += Integer.valueOf(harness.constructor.db.getProperty("leveldb.num-files-at-level" + level));
+                files +=
+                        Integer.valueOf(
+                                harness.constructor.db.getProperty(
+                                        "leveldb.num-files-at-level" + level));
             }
             assertTrue(files > 0);
         }
     }
 
-    private static class Harness<T extends Constructor>
-            implements AutoCloseable
-    {
+    private static class Harness<T extends Constructor> implements AutoCloseable {
         private final UserComparator comparator;
         private String desc;
         private final Random rnd;
         private T constructor;
         private Options options;
 
-        public Harness(Random random, DBComparator comparator, Class<T> cls, int restartInterval) throws Exception
-        {
+        public Harness(Random random, DBComparator comparator, Class<T> cls, int restartInterval)
+                throws Exception {
             this.rnd = random;
             this.options = new Options();
             options.blockRestartInterval(restartInterval);
@@ -572,70 +537,70 @@ public abstract class TableTest
             if (comparator != null) {
                 this.comparator = new CustomUserComparator(comparator);
                 options.comparator(comparator);
-            }
-            else {
+            } else {
                 this.comparator = new BytewiseComparator();
             }
             constructor = cls.getConstructor(UserComparator.class).newInstance(this.comparator);
-            desc = cls.getSimpleName() + ", comparator= " + (comparator == null ? null : comparator.getClass().getSimpleName()) + ", restartInterval=" + restartInterval;
+            desc =
+                    cls.getSimpleName()
+                            + ", comparator= "
+                            + (comparator == null ? null : comparator.getClass().getSimpleName())
+                            + ", restartInterval="
+                            + restartInterval;
         }
 
-        public Random getRnd()
-        {
+        public Random getRnd() {
             return rnd;
         }
 
-        public T getConstructor()
-        {
+        public T getConstructor() {
             return constructor;
         }
 
         /**
-         * Skewed: pick "base" uniformly from range [0,maxLog] and then
-         * return "base" random bits.  The effect is to pick a number in the
-         * range [0,2^maxLog-1] with exponential bias towards smaller numbers.
-         **/
-        private int getRandomSkewed(int maxLog)
-        {
-            return rnd.nextInt(Integer.MAX_VALUE) % (1 << rnd.nextInt(Integer.MAX_VALUE) % (maxLog + 1));
+         * Skewed: pick "base" uniformly from range [0,maxLog] and then return "base" random bits.
+         * The effect is to pick a number in the range [0,2^maxLog-1] with exponential bias towards
+         * smaller numbers.
+         */
+        private int getRandomSkewed(int maxLog) {
+            return rnd.nextInt(Integer.MAX_VALUE)
+                    % (1 << rnd.nextInt(Integer.MAX_VALUE) % (maxLog + 1));
         }
 
-        void add(Slice key, Slice value)
-        {
+        void add(Slice key, Slice value) {
             constructor.add(key, value);
         }
 
-        private void testForwardScan(KVMap data) throws IOException
-        {
+        private void testForwardScan(KVMap data) throws IOException {
             Iterator<Map.Entry<Slice, Slice>> iterator;
             try (SeekingIterator<Slice, Slice> iter = constructor.iterator()) {
                 assertFalse(iter.valid());
                 iter.seekToFirst();
 
                 iterator = data.entrySet().iterator();
-                iterator.forEachRemaining(e -> {
-                    assertTrue(iter.valid());
-                    assertEqualsEntries(entry(iter), e);
-                    iter.next();
-                });
+                iterator.forEachRemaining(
+                        e -> {
+                            assertTrue(iter.valid());
+                            assertEqualsEntries(entry(iter), e);
+                            iter.next();
+                        });
                 assertFalse(iter.valid());
             }
         }
 
-        private static void assertEqualsEntries(SeekingIterator<Slice, Slice> it, Optional<Map.Entry<Slice, Slice>> expected)
-        {
+        private static void assertEqualsEntries(
+                SeekingIterator<Slice, Slice> it, Optional<Map.Entry<Slice, Slice>> expected) {
             assertEquals(expected.isPresent(), it.valid());
             expected.ifPresent(sliceSliceEntry -> assertEqualsEntries(entry(it), sliceSliceEntry));
         }
 
-        private static void assertEqualsEntries(Map.Entry<Slice, Slice> actual, Map.Entry<Slice, Slice> expected)
-        {
+        private static void assertEqualsEntries(
+                Map.Entry<Slice, Slice> actual, Map.Entry<Slice, Slice> expected) {
             assertEquals(actual.getKey(), expected.getKey());
             assertEquals(actual.getValue(), expected.getValue());
         }
 
-        private void testBackwardScan(KVMap data) throws IOException
-        {
+        private void testBackwardScan(KVMap data) throws IOException {
             try (SeekingIterator<Slice, Slice> iter = constructor.iterator()) {
                 assertFalse(iter.valid());
                 KVMap.KVIter iter1 = data.iter();
@@ -651,8 +616,7 @@ public abstract class TableTest
             }
         }
 
-        private void testRandomAccess(KVMap data) throws IOException
-        {
+        private void testRandomAccess(KVMap data) throws IOException {
             try (SeekingIterator<Slice, Slice> iter = constructor.iterator()) {
                 assertFalse(iter.valid());
                 List<Slice> keys = Lists.newArrayList(data.keySet());
@@ -661,82 +625,85 @@ public abstract class TableTest
                 for (int i = 0; i < 200; i++) {
                     int toss = rnd.nextInt(5);
                     switch (toss) {
-                        case 0: {
-                            if (iter.valid()) {
-                                iter.next();
+                        case 0:
+                            {
+                                if (iter.valid()) {
+                                    iter.next();
+                                    assertEqualsEntries(iter, modelIter.next());
+                                }
+                                break;
+                            }
+
+                        case 1:
+                            {
+                                iter.seekToFirst();
+                                modelIter = data.iter();
                                 assertEqualsEntries(iter, modelIter.next());
                             }
-                            break;
-                        }
 
-                        case 1: {
-                            iter.seekToFirst();
-                            modelIter = data.iter();
-                            assertEqualsEntries(iter, modelIter.next());
-                        }
-
-                        case 2: {
-                            Slice key = pickRandomKey(rnd, keys);
-                            modelIter = data.iter().seek(key);
-                            iter.seek(key);
-                            assertEqualsEntries(iter, modelIter.entry());
-                            break;
-                        }
-
-                        case 3: {
-                            if (iter.valid()) {
-                                iter.prev();
-                                assertEqualsEntries(iter, modelIter.prev());
+                        case 2:
+                            {
+                                Slice key = pickRandomKey(rnd, keys);
+                                modelIter = data.iter().seek(key);
+                                iter.seek(key);
+                                assertEqualsEntries(iter, modelIter.entry());
+                                break;
                             }
-                            break;
-                        }
-                        case 4: {
-                            iter.seekToLast();
-                            assertEqualsEntries(iter, modelIter.seekToLast());
-                            break;
-                        }
+
+                        case 3:
+                            {
+                                if (iter.valid()) {
+                                    iter.prev();
+                                    assertEqualsEntries(iter, modelIter.prev());
+                                }
+                                break;
+                            }
+                        case 4:
+                            {
+                                iter.seekToLast();
+                                assertEqualsEntries(iter, modelIter.seekToLast());
+                                break;
+                            }
                     }
                 }
             }
         }
 
-        Slice pickRandomKey(Random rnd, List<Slice> keys)
-        {
+        Slice pickRandomKey(Random rnd, List<Slice> keys) {
             if (keys.isEmpty()) {
                 return asciiToSlice("foo");
-            }
-            else {
+            } else {
                 int index = rnd.nextInt(keys.size());
                 Slice result = keys.get(index).copySlice();
                 switch (rnd.nextInt(3)) {
                     case 0:
                         // Return an existing key
                         break;
-                    case 1: {
-                        // Attempt to return something smaller than an existing key
-                        int idx1 = result.length() - 1;
-                        if (result.length() > 0 && result.getByte(idx1) > '\0') {
-                            result.setByte(idx1, result.getByte(idx1) - 1);
+                    case 1:
+                        {
+                            // Attempt to return something smaller than an existing key
+                            int idx1 = result.length() - 1;
+                            if (result.length() > 0 && result.getByte(idx1) > '\0') {
+                                result.setByte(idx1, result.getByte(idx1) - 1);
+                            }
+                            break;
                         }
-                        break;
-                    }
-                    case 2: {
-                        // Return something larger than an existing key
-                        result = increment(comparator, result);
-                        break;
-                    }
+                    case 2:
+                        {
+                            // Return something larger than an existing key
+                            result = increment(comparator, result);
+                            break;
+                        }
                 }
                 return result;
             }
         }
 
-        Slice increment(Comparator cmp, Slice key)
-        {
+        Slice increment(Comparator cmp, Slice key) {
             Slice k;
             if (cmp instanceof BytewiseComparator) {
                 k = key;
-            }
-            else {
+            } else {
                 k = reverse(key);
             }
             byte[] bytes = Arrays.copyOf(k.getBytes(), k.length() + 1);
@@ -744,8 +711,7 @@ public abstract class TableTest
             return new Slice(bytes);
         }
 
-        private Slice reverse(Slice key)
-        {
+        private Slice reverse(Slice key) {
             byte[] bytes = new byte[key.length()];
             for (int i = 0, k = key.length() - 1; k >= 0; i++, k--) {
                 bytes[i] = key.getByte(k);
@@ -753,8 +719,7 @@ public abstract class TableTest
             return new Slice(bytes);
         }
 
-        void test(Env env) throws IOException
-        {
+        void test(Env env) throws IOException {
             KVMap data = constructor.finish(options, env);
 
             testForwardScan(data);
@@ -763,37 +728,31 @@ public abstract class TableTest
         }
 
         @Override
-        public void close() throws Exception
-        {
+        public void close() throws Exception {
             constructor.close();
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             return desc;
         }
     }
 
-    private static class BlockConstructor
-            extends Constructor
-    {
+    private static class BlockConstructor extends Constructor {
         private Block entries;
 
-        public BlockConstructor(UserComparator comparator)
-        {
+        public BlockConstructor(UserComparator comparator) {
             super(comparator);
         }
 
         @Override
-        public SeekingIterator<Slice, Slice> iterator()
-        {
+        public SeekingIterator<Slice, Slice> iterator() {
             return entries.iterator();
         }
 
         @Override
-        protected void finish(Options options, Env env, UserComparator cmp, KVMap map) throws IOException
-        {
+        protected void finish(Options options, Env env, UserComparator cmp, KVMap map)
+                throws IOException {
             BlockBuilder builder = new BlockBuilder(256, options.blockRestartInterval(), cmp);
 
             for (Map.Entry<Slice, Slice> entry : map.entrySet()) {
@@ -806,19 +765,16 @@ public abstract class TableTest
         }
     }
 
-    private static class MemTableConstructor
-            extends Constructor
-    {
+    private static class MemTableConstructor extends Constructor {
         private MemTable table;
 
-        public MemTableConstructor(UserComparator comparator)
-        {
+        public MemTableConstructor(UserComparator comparator) {
             super(comparator);
         }
 
         @Override
-        protected void finish(Options options, Env env, UserComparator comparator, KVMap kvMap) throws IOException
-        {
+        protected void finish(Options options, Env env, UserComparator comparator, KVMap kvMap)
+                throws IOException {
             table = new MemTable(new InternalKeyComparator(comparator));
             int seq = 1;
             for (Map.Entry<Slice, Slice> e : kvMap.entrySet()) {
@@ -827,31 +783,29 @@ public abstract class TableTest
         }
 
         @Override
-        public SeekingIterator<Slice, Slice> iterator()
-        {
-            return new KeyConverterIterator<>(table.iterator(), InternalKey::getUserKey, k -> new InternalKey(k, MAX_SEQUENCE_NUMBER, ValueType.VALUE));
+        public SeekingIterator<Slice, Slice> iterator() {
+            return new KeyConverterIterator<>(
+                    table.iterator(),
+                    InternalKey::getUserKey,
+                    k -> new InternalKey(k, MAX_SEQUENCE_NUMBER, ValueType.VALUE));
         }
     }
 
-    private static class DbConstructor
-            extends Constructor
-    {
+    private static class DbConstructor extends Constructor {
         private DbImpl db;
         private File tmpDir;
         private CountingHandlesEnv env;
 
-        public DbConstructor(UserComparator comparator)
-        {
+        public DbConstructor(UserComparator comparator) {
             super(comparator);
         }
 
         @Override
-        protected void finish(Options options, Env env, UserComparator comparator, KVMap kvMap) throws IOException
-        {
-            options
-                    .createIfMissing(true)
+        protected void finish(Options options, Env env, UserComparator comparator, KVMap kvMap)
+                throws IOException {
+            options.createIfMissing(true)
                     .errorIfExists(true)
-                    .writeBufferSize(10000);  // Something small to force merging
+                    .writeBufferSize(10000); // Something small to force merging
             tmpDir = env.createTempDir("leveldb");
             this.env = new CountingHandlesEnv(env);
             this.db = new DbImpl(options, tmpDir.getPath(), this.env);
@@ -861,47 +815,43 @@ public abstract class TableTest
         }
 
         @Override
-        public SeekingIterator<Slice, Slice> iterator()
-        {
-            return SeekingDBIteratorAdapter.toSeekingIterator(db.iterator(), Slice::getBytes, Slice::new, Slice::new);
+        public SeekingIterator<Slice, Slice> iterator() {
+            return SeekingDBIteratorAdapter.toSeekingIterator(
+                    db.iterator(), Slice::getBytes, Slice::new, Slice::new);
         }
 
         @Override
-        public void close() throws Exception
-        {
+        public void close() throws Exception {
             super.close();
             db.close();
-            assertEquals(env.getOpenHandles(), 0, "All files should have been closed (validate all iterables should be closed)");
+            assertEquals(
+                    env.getOpenHandles(),
+                    0,
+                    "All files should have been closed (validate all iterables should be closed)");
             assertTrue(!tmpDir.exists() || tmpDir.deleteRecursively());
         }
     }
 
-    public class ReverseDBComparator
-            implements DBComparator
-    {
+    public class ReverseDBComparator implements DBComparator {
         private final BytewiseComparator com = new BytewiseComparator();
 
         @Override
-        public String name()
-        {
+        public String name() {
             return "leveldb.ReverseBytewiseComparator";
         }
 
         @Override
-        public byte[] findShortestSeparator(byte[] start, byte[] limit)
-        {
+        public byte[] findShortestSeparator(byte[] start, byte[] limit) {
             Slice s = reverseToSlice(start);
             Slice l = reverseToSlice(limit);
             return reverseB(com.findShortestSeparator(s, l).getBytes());
         }
 
-        private Slice reverseToSlice(byte[] key)
-        {
+        private Slice reverseToSlice(byte[] key) {
             return new Slice(reverseB(key));
         }
 
-        private byte[] reverseB(byte[] key)
-        {
+        private byte[] reverseB(byte[] key) {
             byte[] bytes = new byte[key.length];
             for (int i = 0, k = key.length - 1; k >= 0; i++, k--) {
                 bytes[i] = key[k];
@@ -910,69 +860,55 @@ public abstract class TableTest
         }
 
         @Override
-        public byte[] findShortSuccessor(byte[] key)
-        {
+        public byte[] findShortSuccessor(byte[] key) {
             Slice s = reverseToSlice(key);
             return reverseB(com.findShortSuccessor(s).getBytes());
         }
 
         @Override
-        public int compare(byte[] a, byte[] b)
-        {
+        public int compare(byte[] a, byte[] b) {
             return com.compare(reverseToSlice(a), reverseToSlice(b));
         }
     }
 
-    private static class StringSource
-            implements RandomInputFile
-    {
+    private static class StringSource implements RandomInputFile {
         byte[] data;
 
-        public StringSource(byte[] data)
-        {
+        public StringSource(byte[] data) {
             this.data = data;
         }
 
         @Override
-        public long size()
-        {
+        public long size() {
             return data.length;
         }
 
         @Override
-        public ByteBuffer read(long offset, int length)
-        {
+        public ByteBuffer read(long offset, int length) {
             return Slices.wrappedBuffer(data).copySlice((int) offset, length).toByteBuffer();
         }
 
         @Override
-        public void close()
-        {
-        }
+        public void close() {}
     }
 
-    private static class StringSink
-            implements WritableFile
-    {
+    private static class StringSink implements WritableFile {
         private ByteArrayOutputStream sb = new ByteArrayOutputStream();
 
         byte[] content;
 
         @Override
-        public void append(Slice data) throws IOException
-        {
+        public void append(Slice data) throws IOException {
             sb.write(data.getBytes());
         }
 
         @Override
-        public void force() throws IOException
-        {
+        public void force() throws IOException {
             content = sb.toByteArray();
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             content = sb.toByteArray();
             sb.close();
             sb = null;
@@ -980,18 +916,19 @@ public abstract class TableTest
     }
 
     private void tableTest(int blockSize, int blockRestartInterval, BlockEntry... entries)
-            throws Exception
-    {
+            throws Exception {
         tableTest(blockSize, blockRestartInterval, asList(entries));
     }
 
     private void tableTest(int blockSize, int blockRestartInterval, List<BlockEntry> entries)
-            throws Exception
-    {
+            throws Exception {
         reopenFile();
-        Options options = new Options().blockSize(blockSize).blockRestartInterval(blockRestartInterval);
-        try (WritableFile writableFile = defaultEnv.newWritableFile(defaultEnv.toFile(file.getPath()))) {
-            TableBuilder builder = new TableBuilder(options, writableFile, new BytewiseComparator());
+        Options options =
+                new Options().blockSize(blockSize).blockRestartInterval(blockRestartInterval);
+        try (WritableFile writableFile =
+                defaultEnv.newWritableFile(defaultEnv.toFile(file.getPath()))) {
+            TableBuilder builder =
+                    new TableBuilder(options, writableFile, new BytewiseComparator());
 
             for (BlockEntry entry : entries) {
                 builder.add(entry);
@@ -1001,9 +938,10 @@ public abstract class TableTest
         List<BlockEntry> reverseEntries = Lists.reverse(entries);
         Table table = null;
         try {
-            table = createTable(file, new BytewiseComparator(), true, null);
+            table = createTable(file, new BytewiseComparator());
 
-            try (SeekingIterator<Slice, Slice> seekingIterator = table.iterator(new ReadOptions())) {
+            try (SeekingIterator<Slice, Slice> seekingIterator =
+                    table.iterator(new ReadOptions())) {
                 seekingIterator.seekToFirst();
                 BlockHelper.assertSequence(seekingIterator, entries);
 
@@ -1016,7 +954,8 @@ public abstract class TableTest
 
                 long lastApproximateOffset = 0;
                 for (BlockEntry entry : entries) {
-                    List<BlockEntry> nextEntries = entries.subList(entries.indexOf(entry), entries.size());
+                    List<BlockEntry> nextEntries =
+                            entries.subList(entries.indexOf(entry), entries.size());
                     seekingIterator.seek(entry.getKey());
                     BlockHelper.assertSequence(seekingIterator, nextEntries);
 
@@ -1024,28 +963,32 @@ public abstract class TableTest
                     BlockHelper.assertSequence(seekingIterator, nextEntries);
 
                     seekingIterator.seek(BlockHelper.after(entry));
-                    BlockHelper.assertSequence(seekingIterator, nextEntries.subList(1, nextEntries.size()));
+                    BlockHelper.assertSequence(
+                            seekingIterator, nextEntries.subList(1, nextEntries.size()));
 
                     long approximateOffset = table.getApproximateOffsetOf(entry.getKey());
                     assertTrue(approximateOffset >= lastApproximateOffset);
                     lastApproximateOffset = approximateOffset;
 
                     seekingIterator.seek(entry.getKey());
-                    List<BlockEntry> prevEntries = reverseEntries.subList(reverseEntries.indexOf(entry), reverseEntries.size());
+                    List<BlockEntry> prevEntries =
+                            reverseEntries.subList(
+                                    reverseEntries.indexOf(entry), reverseEntries.size());
                     BlockHelper.assertReverseSequence(seekingIterator, prevEntries);
                     assertTrue(seekingIterator.next());
                     BlockHelper.assertSequence(seekingIterator, entries);
                 }
 
-                Slice endKey = Slices.wrappedBuffer(new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
+                Slice endKey =
+                        Slices.wrappedBuffer(
+                                new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
                 seekingIterator.seek(endKey);
                 BlockHelper.assertSequence(seekingIterator, Collections.<BlockEntry>emptyList());
 
                 long approximateOffset = table.getApproximateOffsetOf(endKey);
                 assertTrue(approximateOffset >= lastApproximateOffset);
             }
-        }
-        finally {
+        } finally {
             if (table != null) {
                 table.close();
             }
@@ -1053,15 +996,11 @@ public abstract class TableTest
     }
 
     @BeforeMethod
-    public void setUp()
-            throws Exception
-    {
+    public void setUp() throws Exception {
         reopenFile();
     }
 
-    private void reopenFile()
-            throws IOException
-    {
+    private void reopenFile() throws IOException {
         if (file != null) {
             file.delete();
         }
@@ -1074,77 +1013,64 @@ public abstract class TableTest
     protected abstract Env getEnv();
 
     @AfterMethod
-    public void tearDown()
-            throws Exception
-    {
+    public void tearDown() throws Exception {
         file.getParentFile().deleteRecursively();
     }
 
-    public static class KeyConverterIterator<K1, K2, V>
-            implements SeekingIterator<K2, V>
-    {
+    public static class KeyConverterIterator<K1, K2, V> implements SeekingIterator<K2, V> {
         private final SeekingIterator<K1, V> it;
         private final Function<K1, K2> from;
         private final Function<K2, K1> to;
 
-        public KeyConverterIterator(SeekingIterator<K1, V> it, Function<K1, K2> from, Function<K2, K1> to)
-        {
+        public KeyConverterIterator(
+                SeekingIterator<K1, V> it, Function<K1, K2> from, Function<K2, K1> to) {
             this.it = it;
             this.from = from;
             this.to = to;
         }
 
         @Override
-        public boolean valid()
-        {
+        public boolean valid() {
             return it.valid();
         }
 
         @Override
-        public boolean seekToFirst()
-        {
+        public boolean seekToFirst() {
             return it.seekToFirst();
         }
 
         @Override
-        public boolean seekToLast()
-        {
+        public boolean seekToLast() {
             return it.seekToLast();
         }
 
         @Override
-        public boolean seek(K2 key)
-        {
+        public boolean seek(K2 key) {
             return it.seek(to.apply(key));
         }
 
         @Override
-        public boolean next()
-        {
+        public boolean next() {
             return it.next();
         }
 
         @Override
-        public boolean prev()
-        {
+        public boolean prev() {
             return it.prev();
         }
 
         @Override
-        public K2 key()
-        {
+        public K2 key() {
             return from.apply(it.key());
         }
 
         @Override
-        public V value()
-        {
+        public V value() {
             return it.value();
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             it.close();
         }
     }

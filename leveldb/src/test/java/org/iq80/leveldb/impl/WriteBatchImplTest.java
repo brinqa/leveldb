@@ -17,16 +17,14 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.testng.Assert.assertTrue;
+
 import org.iq80.leveldb.util.Slice;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertTrue;
-
-public class WriteBatchImplTest
-{
+public class WriteBatchImplTest {
     @Test
-    public void testApproximateSize()
-    {
+    public void testApproximateSize() {
         WriteBatchImpl batch = new WriteBatchImpl();
         int emptySize = batch.getApproximateSize();
 
@@ -43,8 +41,7 @@ public class WriteBatchImplTest
         assertTrue(twoKeysSize < postDeleteSize);
     }
 
-    private static Slice slice(String txt)
-    {
+    private static Slice slice(String txt) {
         return new Slice(txt.getBytes());
     }
 }

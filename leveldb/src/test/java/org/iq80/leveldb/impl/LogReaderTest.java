@@ -17,28 +17,26 @@
  */
 package org.iq80.leveldb.impl;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import org.iq80.leveldb.util.PureJavaCrc32C;
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.SliceOutput;
-import org.iq80.leveldb.env.WritableFile;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Random;
-
 import static org.iq80.leveldb.impl.LogConstants.BLOCK_SIZE;
 import static org.iq80.leveldb.impl.LogConstants.HEADER_SIZE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
-public class LogReaderTest
-{
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Random;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.PureJavaCrc32C;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.SliceOutput;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+public class LogReaderTest {
     private StringDest dest;
     private StringSource source;
     private ReportCollector report;
@@ -51,46 +49,46 @@ public class LogReaderTest
     private int numInitialOffsetRecords;
 
     @BeforeMethod
-    public void setUp()
-    {
+    public void setUp() {
         dest = new StringDest();
         source = new StringSource();
         report = new ReportCollector();
 
         reading = false;
         writer = LogWriter.createWriter(0, dest);
-        reader = new LogReader(source, report, true/*checksum*/, 0/*initialOffset*/);
-        initialOffsetRecordSizes = new int[] {
-                10000,  // Two sizable records in first block
-                10000,
-                2 * BLOCK_SIZE - 1000,  // Span three blocks
-                1,
-                13716,  // Consume all but two bytes of block 3.
-                BLOCK_SIZE - HEADER_SIZE, // Consume the entirety of block 4.
-        };
-        initialOffsetLastRecordOffsets = new long[] {
-                0,
-                HEADER_SIZE + 10000,
-                2 * (HEADER_SIZE + 10000),
-                2 * (HEADER_SIZE + 10000) +
-                        (2 * BLOCK_SIZE - 1000) + 3 * HEADER_SIZE,
-                2 * (HEADER_SIZE + 10000) +
-                        (2 * BLOCK_SIZE - 1000) + 3 * HEADER_SIZE
-                        + HEADER_SIZE + 1,
-                3 * BLOCK_SIZE,
-        };
+        reader = new LogReader(source, report, true /*checksum*/, 0 /*initialOffset*/);
+        initialOffsetRecordSizes =
+                new int[] {
+                    10000, // Two sizable records in first block
+                    10000,
+                    2 * BLOCK_SIZE - 1000, // Span three blocks
+                    1,
+                    13716, // Consume all but two bytes of block 3.
+                    BLOCK_SIZE - HEADER_SIZE, // Consume the entirety of block 4.
+                };
+        initialOffsetLastRecordOffsets =
+                new long[] {
+                    0,
+                    HEADER_SIZE + 10000,
+                    2 * (HEADER_SIZE + 10000),
+                    2 * (HEADER_SIZE + 10000) + (2 * BLOCK_SIZE - 1000) + 3 * HEADER_SIZE,
+                    2 * (HEADER_SIZE + 10000)
+                            + (2 * BLOCK_SIZE - 1000)
+                            + 3 * HEADER_SIZE
+                            + HEADER_SIZE
+                            + 1,
+                    3 * BLOCK_SIZE,
+                };
         numInitialOffsetRecords = initialOffsetLastRecordOffsets.length;
     }
 
     @Test
-    public void testEmpty() throws Exception
-    {
+    public void testEmpty() throws Exception {
         assertEquals(read(), "EOF");
     }
 
     @Test
-    public void testReadWrite() throws Exception
-    {
+    public void testReadWrite() throws Exception {
         write("foo");
         write("bar");
         write("");
@@ -100,12 +98,11 @@ public class LogReaderTest
         assertEquals(read(), "");
         assertEquals(read(), "xxxx");
         assertEquals(read(), "EOF");
-        assertEquals(read(), "EOF");  // Make sure reads at eof work
+        assertEquals(read(), "EOF"); // Make sure reads at eof work
     }
 
     @Test
-    public void testManyBlocks() throws Exception
-    {
+    public void testManyBlocks() throws Exception {
         for (int i = 0; i < 100000; i++) {
             write(numberString(i));
         }
@@ -116,8 +113,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testFragmentation() throws Exception
-    {
+    public void testFragmentation() throws Exception {
         write("small");
         write(bigString("medium", 50000));
         write(bigString("large", 100000));
@@ -128,8 +124,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testMarginalTrailer() throws Exception
-    {
+    public void testMarginalTrailer() throws Exception {
         // Make a trailer that is exactly the same length as an empty record.
         int n = BLOCK_SIZE - 2 * HEADER_SIZE;
         write(bigString("foo", n));
@@ -143,8 +138,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testMarginalTrailer2() throws Exception
-    {
+    public void testMarginalTrailer2() throws Exception {
         // Make a trailer that is exactly the same length as an empty record.
         int n = BLOCK_SIZE - 2 * HEADER_SIZE;
         write(bigString("foo", n));
@@ -158,8 +152,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testShortTrailer() throws Exception
-    {
+    public void testShortTrailer() throws Exception {
         int n = BLOCK_SIZE - 2 * HEADER_SIZE + 4;
         write(bigString("foo", n));
         assertEquals(writtenBytes(), BLOCK_SIZE - HEADER_SIZE + 4);
@@ -172,8 +165,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testAlignedEof() throws Exception
-    {
+    public void testAlignedEof() throws Exception {
         int n = BLOCK_SIZE - 2 * HEADER_SIZE + 4;
         write(bigString("foo", n));
         assertEquals(writtenBytes(), BLOCK_SIZE - HEADER_SIZE + 4);
@@ -182,8 +174,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testOpenForAppend() throws Exception
-    {
+    public void testOpenForAppend() throws Exception {
         write("hello");
         reopenForAppend();
         write("world");
@@ -193,8 +184,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testRandomRead() throws Exception
-    {
+    public void testRandomRead() throws Exception {
         int n = 500;
         Random writeRnd = new Random(301);
         for (int i = 0; i < n; i++) {
@@ -209,8 +199,7 @@ public class LogReaderTest
 
     // Tests of all the error paths in LogLeader follow:
     @Test
-    public void testReadError() throws Exception
-    {
+    public void testReadError() throws Exception {
         write("foo");
         forceError();
         assertEquals(read(), "EOF");
@@ -219,8 +208,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testBadRecordType() throws Exception
-    {
+    public void testBadRecordType() throws Exception {
         write("foo");
         // Type is stored in header[6]
         incrementByte(6, 100);
@@ -231,10 +219,9 @@ public class LogReaderTest
     }
 
     @Test
-    public void testTruncatedTrailingRecordIsIgnored() throws Exception
-    {
+    public void testTruncatedTrailingRecordIsIgnored() throws Exception {
         write("foo");
-        shrinkSize(4);   // Drop all payload as well as a header byte
+        shrinkSize(4); // Drop all payload as well as a header byte
         assertEquals(read(), "EOF");
         // Truncated last record is ignored, not treated as an error.
         assertEquals(droppedBytes(), 0);
@@ -242,8 +229,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testBadLength() throws Exception
-    {
+    public void testBadLength() throws Exception {
         int kPayloadSize = BLOCK_SIZE - HEADER_SIZE;
         write(bigString("bar", kPayloadSize));
         write("foo");
@@ -255,8 +241,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testBadLengthAtEndIsIgnored() throws Exception
-    {
+    public void testBadLengthAtEndIsIgnored() throws Exception {
         write("foo");
         shrinkSize(1);
         assertEquals(read(), "EOF");
@@ -265,8 +250,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testChecksumMismatch() throws Exception
-    {
+    public void testChecksumMismatch() throws Exception {
         write("foo");
         incrementByte(0, 10);
         assertEquals(read(), "EOF");
@@ -275,8 +259,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testUnexpectedMiddleType() throws Exception
-    {
+    public void testUnexpectedMiddleType() throws Exception {
         write("foo");
         setByte(6, LogChunkType.MIDDLE.getPersistentId());
         fixChecksum(0, 3);
@@ -286,8 +269,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testUnexpectedLastType() throws Exception
-    {
+    public void testUnexpectedLastType() throws Exception {
         write("foo");
         setByte(6, LogChunkType.LAST.getPersistentId());
         fixChecksum(0, 3);
@@ -297,8 +279,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testUnexpectedFullType() throws Exception
-    {
+    public void testUnexpectedFullType() throws Exception {
         write("foo");
         write("bar");
         setByte(6, LogChunkType.FIRST.getPersistentId());
@@ -310,8 +291,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testUnexpectedFirstType() throws Exception
-    {
+    public void testUnexpectedFirstType() throws Exception {
         write("foo");
         write(bigString("bar", 100000));
         setByte(6, LogChunkType.FIRST.getPersistentId());
@@ -323,8 +303,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testMissingLastIsIgnored() throws Exception
-    {
+    public void testMissingLastIsIgnored() throws Exception {
         write(bigString("bar", BLOCK_SIZE));
         // Remove the LAST block, including header.
         shrinkSize(14);
@@ -334,8 +313,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testPartialLastIsIgnored() throws Exception
-    {
+    public void testPartialLastIsIgnored() throws Exception {
         write(bigString("bar", BLOCK_SIZE));
         // Cause a bad record length in the LAST block.
         shrinkSize(1);
@@ -345,8 +323,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testSkipIntoMultiRecord() throws Exception
-    {
+    public void testSkipIntoMultiRecord() throws Exception {
         // Consider a fragmented record:
         //    first(R1), middle(R1), last(R1), first(R2)
         // If initialOffset points to a record after first(R1) but before first(R2)
@@ -363,8 +340,7 @@ public class LogReaderTest
     }
 
     @Test
-    public void testErrorJoinsRecords() throws Exception
-    {
+    public void testErrorJoinsRecords() throws Exception {
         // Consider two fragmented records:
         //    first(R1) last(R1) first(R2) last(R2)
         // where the middle two fragments disappear.  We do not want
@@ -388,93 +364,77 @@ public class LogReaderTest
     }
 
     @Test
-    public void testReadStart() throws Exception
-    {
+    public void testReadStart() throws Exception {
         checkInitialOffsetRecord(0, 0);
     }
 
     @Test
-    public void testReadSecondOneOff() throws Exception
-    {
+    public void testReadSecondOneOff() throws Exception {
         checkInitialOffsetRecord(1, 1);
     }
 
     @Test
-    public void testReadSecondTenThousand() throws Exception
-    {
+    public void testReadSecondTenThousand() throws Exception {
         checkInitialOffsetRecord(10000, 1);
     }
 
     @Test
-    public void testReadSecondStart() throws Exception
-    {
+    public void testReadSecondStart() throws Exception {
         checkInitialOffsetRecord(10007, 1);
     }
 
     @Test
-    public void testReadThirdOneOff() throws Exception
-    {
+    public void testReadThirdOneOff() throws Exception {
         checkInitialOffsetRecord(10008, 2);
     }
 
     @Test
-    public void testReadThirdStart() throws Exception
-    {
+    public void testReadThirdStart() throws Exception {
         checkInitialOffsetRecord(20014, 2);
     }
 
     @Test
-    public void testReadFourthOneOff() throws Exception
-    {
+    public void testReadFourthOneOff() throws Exception {
         checkInitialOffsetRecord(20015, 3);
     }
 
     @Test
-    public void testReadFourthFirstBlockTrailer() throws Exception
-    {
+    public void testReadFourthFirstBlockTrailer() throws Exception {
         checkInitialOffsetRecord(BLOCK_SIZE - 4, 3);
     }
 
     @Test
-    public void testReadFourthMiddleBlock() throws Exception
-    {
+    public void testReadFourthMiddleBlock() throws Exception {
         checkInitialOffsetRecord(BLOCK_SIZE + 1, 3);
     }
 
     @Test
-    public void testReadFourthLastBlock() throws Exception
-    {
+    public void testReadFourthLastBlock() throws Exception {
         checkInitialOffsetRecord(2 * BLOCK_SIZE + 1, 3);
     }
 
     @Test
-    public void testReadFourthStart() throws Exception
-    {
+    public void testReadFourthStart() throws Exception {
         checkInitialOffsetRecord(
-                2 * (HEADER_SIZE + 1000) + (2 * BLOCK_SIZE - 1000) + 3 * HEADER_SIZE,
-                3);
+                2 * (HEADER_SIZE + 1000) + (2 * BLOCK_SIZE - 1000) + 3 * HEADER_SIZE, 3);
     }
 
     @Test
-    public void testReadInitialOffsetIntoBlockPadding() throws Exception
-    {
+    public void testReadInitialOffsetIntoBlockPadding() throws Exception {
         checkInitialOffsetRecord(3 * BLOCK_SIZE - 3, 5);
     }
 
     @Test
-    public void testReadEnd() throws Exception
-    {
+    public void testReadEnd() throws Exception {
         checkOffsetPastEndReturnsNoRecords(0);
     }
 
     @Test
-    public void testReadPastEnd() throws Exception
-    {
+    public void testReadPastEnd() throws Exception {
         checkOffsetPastEndReturnsNoRecords(5);
     }
 
-    private String read()
-    {
+    private String read() {
         if (!reading) {
             reading = true;
             source.contents = new Slice(dest.contents.toByteArray());
@@ -483,58 +443,48 @@ public class LogReaderTest
         Slice slice = reader.readRecord();
         if (slice != null) {
             return new String(slice.getBytes());
-        }
-        else {
+        } else {
             return "EOF";
         }
     }
 
-    private static String bigString(String partialString, int n)
-    {
+    private static String bigString(String partialString, int n) {
         return Strings.repeat(partialString, (n / partialString.length()) + 1).substring(0, n);
     }
 
     // Construct a string from a number
-    private static String numberString(int n)
-    {
+    private static String numberString(int n) {
         return n + ".";
     }
 
     // Return a skewed potentially long string
-    static String randomSkewedString(int i, Random rnd)
-    {
+    static String randomSkewedString(int i, Random rnd) {
         return bigString(numberString(i), skewed(rnd, 17));
     }
 
-    private static int skewed(Random rnd, int i1)
-    {
+    private static int skewed(Random rnd, int i1) {
         return rnd.nextInt(Integer.MAX_VALUE) % (1 << rnd.nextInt(Integer.MAX_VALUE) % (i1 + 1));
     }
 
-    void reopenForAppend() throws IOException
-    {
+    void reopenForAppend() throws IOException {
         writer.close();
 
         writer = LogWriter.createWriter(0, dest, dest.contents.size());
     }
 
-    void incrementByte(int offset, int delta)
-    {
+    void incrementByte(int offset, int delta) {
         dest.contents.getBuf()[offset] += (byte) delta;
     }
 
-    void setByte(int offset, int newByte)
-    {
+    void setByte(int offset, int newByte) {
         dest.contents.getBuf()[offset] = (byte) newByte;
     }
 
-    void shrinkSize(int bytes)
-    {
+    void shrinkSize(int bytes) {
         dest.contents.shrink(dest.contents.size() - bytes);
     }
 
-    void fixChecksum(int headerOffset, int len)
-    {
+    void fixChecksum(int headerOffset, int len) {
         // Compute crc of type/len/data
         PureJavaCrc32C jCrc = new PureJavaCrc32C();
         jCrc.update(dest.contents.getBuf(), headerOffset + 6, 1 + len);
@@ -542,101 +492,87 @@ public class LogReaderTest
         new Slice(dest.contents.getBuf()).setInt(headerOffset, crc);
     }
 
-    void forceError()
-    {
+    void forceError() {
         source.forceError = true;
     }
 
-    int droppedBytes()
-    {
+    int droppedBytes() {
         return report.doppedBytes;
     }
 
-    String reportMessage()
-    {
+    String reportMessage() {
         return report.message;
     }
 
     // Returns OK iff recorded error message contains "msg"
-    String matchError(String msg)
-    {
+    String matchError(String msg) {
         if (!report.message.contains(msg)) {
             return report.message;
-        }
-        else {
+        } else {
             return "OK";
         }
     }
 
-    void write(String msg) throws IOException
-    {
+    void write(String msg) throws IOException {
         assertTrue(!reading, "write() after starting to read");
         writer.addRecord(new Slice(msg.getBytes()), false);
     }
 
-    long writtenBytes()
-    {
+    long writtenBytes() {
         return dest.contents.size();
     }
 
-    void writeInitialOffsetLog() throws IOException
-    {
+    void writeInitialOffsetLog() throws IOException {
         for (int i = 0; i < numInitialOffsetRecords; i++) {
-            write(Strings.repeat(String.valueOf((char) ((byte) 'a' + i)), initialOffsetRecordSizes[i]));
+            write(
+                    Strings.repeat(
+                            String.valueOf((char) ((byte) 'a' + i)), initialOffsetRecordSizes[i]));
         }
     }
 
-    void startReadingAt(long initialOffset)
-    {
-        reader = new LogReader(source, report, true/*checksum*/, initialOffset);
+    void startReadingAt(long initialOffset) {
+        reader = new LogReader(source, report, true /*checksum*/, initialOffset);
     }
 
-    void checkOffsetPastEndReturnsNoRecords(long offsetPastEnd) throws IOException
-    {
+    void checkOffsetPastEndReturnsNoRecords(long offsetPastEnd) throws IOException {
         writeInitialOffsetLog();
         reading = true;
         source.contents = new Slice(dest.contents.toByteArray());
-        LogReader offsetReader = new LogReader(source, report, true/*checksum*/,
-                writtenBytes() + offsetPastEnd);
+        LogReader offsetReader =
+                new LogReader(source, report, true /*checksum*/, writtenBytes() + offsetPastEnd);
 
         assertNull(offsetReader.readRecord());
     }
 
-    void checkInitialOffsetRecord(long initialOffset,
-                                  int expectedRecordOffset) throws IOException
-    {
+    void checkInitialOffsetRecord(long initialOffset, int expectedRecordOffset) throws IOException {
         writeInitialOffsetLog();
         reading = true;
         source.contents = new Slice(dest.contents.toByteArray());
-        LogReader offsetReader = new LogReader(source, report, true/*checksum*/,
-                initialOffset);
+        LogReader offsetReader = new LogReader(source, report, true /*checksum*/, initialOffset);
 
         // read all records from expectedRecordOffset through the last one.
         assertLt(expectedRecordOffset, numInitialOffsetRecords);
-        for (; expectedRecordOffset < numInitialOffsetRecords;
-             ++expectedRecordOffset) {
+        for (; expectedRecordOffset < numInitialOffsetRecords; ++expectedRecordOffset) {
             Slice record = offsetReader.readRecord();
             assertEquals(record.length(), initialOffsetRecordSizes[expectedRecordOffset]);
-            assertEquals(offsetReader.getLastRecordOffset(), initialOffsetLastRecordOffsets[expectedRecordOffset]);
+            assertEquals(
+                    offsetReader.getLastRecordOffset(),
+                    initialOffsetLastRecordOffsets[expectedRecordOffset]);
             assertEquals(record.getByte(0), (char) ('a' + expectedRecordOffset));
         }
     }
 
-    private void assertLt(long a, long b)
-    {
+    private void assertLt(long a, long b) {
         assertTrue(a < b, "Expect that " + a + "<" + b + " is false");
     }
 
-    private static class StringSource
-            implements SequentialFile
-    {
+    private static class StringSource implements SequentialFile {
         Slice contents = new Slice(0);
         boolean forceError = false;
         boolean returnedPartial = false;
 
         @Override
-        public void skip(long n) throws IOException
-        {
+        public void skip(long n) throws IOException {
             if (n > contents.length()) {
                 contents = new Slice(0);
                 throw new IOException("in-memory file skipped past end");
@@ -646,8 +582,7 @@ public class LogReaderTest
         }
 
         @Override
-        public int read(int atMost, SliceOutput destination) throws IOException
-        {
+        public int read(int atMost, SliceOutput destination) throws IOException {
             assertTrue(!returnedPartial, "must not read() after eof/error");
             if (forceError) {
                 forceError = false;
@@ -658,9 +593,8 @@ public class LogReaderTest
             int available = contents.length();
             if (available == 0) {
                 returnedPartial = true;
-                return -1; //eof
-            }
-            else if (available < read) {
+                return -1; // eof
+            } else if (available < read) {
                 read = contents.length();
             }
             destination.writeBytes(contents, 0, read);
@@ -669,66 +603,49 @@ public class LogReaderTest
         }
 
         @Override
-        public void close() throws IOException
-        {
-        }
+        public void close() throws IOException {}
     }
 
-    private static class StringDest
-            implements WritableFile
-    {
+    private static class StringDest implements WritableFile {
         SettableByteArrayOutputStream contents = new SettableByteArrayOutputStream();
 
         @Override
-        public void append(Slice data) throws IOException
-        {
+        public void append(Slice data) throws IOException {
             contents.write(data.getBytes());
         }
 
         @Override
-        public void force() throws IOException
-        {
-        }
+        public void force() throws IOException {}
 
         @Override
-        public void close() throws IOException
-        {
-        }
+        public void close() throws IOException {}
     }
 
-    private static class SettableByteArrayOutputStream
-            extends ByteArrayOutputStream
-    {
-        //expose buffer
-        public byte[] getBuf()
-        {
+    private static class SettableByteArrayOutputStream extends ByteArrayOutputStream {
+        // expose buffer
+        public byte[] getBuf() {
             return buf;
         }
 
-        //expose buffer
-        public void shrink(int size)
-        {
+        // expose buffer
+        public void shrink(int size) {
             Preconditions.checkElementIndex(size, count);
             count = size;
         }
     }
 
-    private static class ReportCollector
-            implements LogMonitor
-    {
+    private static class ReportCollector implements LogMonitor {
         int doppedBytes;
         String message = "";
 
         @Override
-        public void corruption(long bytes, String reason)
-        {
+        public void corruption(long bytes, String reason) {
             doppedBytes += bytes;
             message += reason;
         }
 
         @Override
-        public void corruption(long bytes, Throwable reason)
-        {
+        public void corruption(long bytes, Throwable reason) {
             doppedBytes += bytes;
             message += reason.getMessage();
         }

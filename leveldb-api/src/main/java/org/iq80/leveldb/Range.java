@@ -19,26 +19,20 @@ package org.iq80.leveldb;
 
 /**
  * A range of keys as of {@code [start, limit) }
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class Range
-{
+public class Range {
     private final byte[] start;
     private final byte[] limit;
 
-    /**
-     * Included in the range
-     */
-    public byte[] limit()
-    {
+    /** Included in the range */
+    public byte[] limit() {
         return limit;
     }
 
-    /**
-     * Not included in the range
-     */
-    public byte[] start()
-    {
+    /** Not included in the range */
+    public byte[] start() {
         return start;
     }
 
@@ -46,8 +40,7 @@ public class Range
      * @param start key included in the range
      * @param limit key not included in the range
      */
-    public Range(byte[] start, byte[] limit)
-    {
+    public Range(byte[] start, byte[] limit) {
         Options.checkArgNotNull(start, "start");
         Options.checkArgNotNull(limit, "limit");
         this.limit = limit;

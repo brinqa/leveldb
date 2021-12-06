@@ -17,20 +17,17 @@
  */
 package org.iq80.leveldb.impl;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.Maps;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import org.iq80.leveldb.WriteBatch;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-
-import static java.util.Objects.requireNonNull;
-
-public class WriteBatchImpl
-        implements WriteBatch
-{
+public class WriteBatchImpl implements WriteBatch {
     // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
     private static final int HEADER_SIZE = 12;
 
@@ -38,20 +35,17 @@ public class WriteBatchImpl
     private int approximateSize;
 
     @Override
-    public int getApproximateSize()
-    {
+    public int getApproximateSize() {
         return approximateSize;
     }
 
     @Override
-    public int size()
-    {
+    public int size() {
         return batch.size();
     }
 
     @Override
-    public WriteBatchImpl put(byte[] key, byte[] value)
-    {
+    public WriteBatchImpl put(byte[] key, byte[] value) {
         requireNonNull(key, "key is null");
         requireNonNull(value, "value is null");
         batch.add(Maps.immutableEntry(Slices.wrappedBuffer(key), Slices.wrappedBuffer(value)));
@@ -59,8 +53,7 @@ public class WriteBatchImpl
         return this;
     }
 
-    public WriteBatchImpl put(Slice key, Slice value)
-    {
+    public WriteBatchImpl put(Slice key, Slice value) {
         requireNonNull(key, "key is null");
         requireNonNull(value, "value is null");
         batch.add(Maps.immutableEntry(key, value));
@@ -69,16 +62,14 @@ public class WriteBatchImpl
     }
 
     @Override
-    public WriteBatchImpl delete(byte[] key)
-    {
+    public WriteBatchImpl delete(byte[] key) {
         requireNonNull(key, "key is null");
         batch.add(Maps.immutableEntry(Slices.wrappedBuffer(key), (Slice) null));
         approximateSize += 6 + key.length;
         return this;
     }
 
-    public WriteBatchImpl delete(Slice key)
-    {
+    public WriteBatchImpl delete(Slice key) {
         requireNonNull(key, "key is null");
         batch.add(Maps.immutableEntry(key, (Slice) null));
         approximateSize += 6 + key.length();
@@ -86,38 +77,31 @@ public class WriteBatchImpl
     }
 
     @Override
-    public void close()
-    {
-    }
+    public void close() {}
 
-    public void forEach(Handler handler)
-    {
+    public void forEach(Handler handler) {
         for (Entry<Slice, Slice> entry : batch) {
             Slice key = entry.getKey();
             Slice value = entry.getValue();
             if (value != null) {
                 handler.put(key, value);
-            }
-            else {
+            } else {
                 handler.delete(key);
             }
         }
     }
 
-    public void append(WriteBatchImpl batch)
-    {
+    public void append(WriteBatchImpl batch) {
         this.batch.addAll(batch.batch);
         this.approximateSize += batch.approximateSize;
     }
 
-    public void clear()
-    {
+    public void clear() {
         approximateSize = 0;
         batch.clear();
     }
 
-    public interface Handler
-    {
+    public interface Handler {
         void put(Slice key, Slice value);
 
         void delete(Slice key);

@@ -18,41 +18,32 @@
 package org.iq80.leveldb.util;
 
 import com.google.common.base.Throwables;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 
-public final class Closeables
-{
-    private Closeables()
-    {
-    }
+public final class Closeables {
+    private Closeables() {}
 
-    public static void closeQuietly(Closeable closeable)
-    {
+    public static void closeQuietly(Closeable closeable) {
         if (closeable == null) {
             return;
         }
         try {
             closeable.close();
-        }
-        catch (IOException ignored) {
+        } catch (IOException ignored) {
         }
     }
 
-    public static void closeAll(Iterable<? extends Closeable> closeables) throws IOException
-    {
+    public static void closeAll(Iterable<? extends Closeable> closeables) throws IOException {
         Throwable throwable = null;
         for (Closeable closeable : closeables) {
             try {
                 closeable.close();
-            }
-            catch (Throwable e) {
+            } catch (Throwable e) {
                 if (throwable == null) {
                     throwable = e;
-                }
-                else {
+                } else {
                     throwable.addSuppressed(e);
                 }
             }
@@ -65,25 +56,24 @@ public final class Closeables
     }
 
     /**
-     * Create a wrapper for {@code resource}. If wrapper fail to be created, resource is properly closed.
-     * In the case if {@code wrapperFactory.call()} succeed, returned object is responsible to close {@code resource}.
+     * Create a wrapper for {@code resource}. If wrapper fail to be created, resource is properly
+     * closed. In the case if {@code wrapperFactory.call()} succeed, returned object is responsible
+     * to close {@code resource}.
      *
      * @param wrapperFactory wrapper factory
-     * @param resource       resource used by wrapper
-     * @param <T>            wrapper object type
+     * @param resource resource used by wrapper
+     * @param <T> wrapper object type
      * @return resource wrapper instance
      * @throws IOException in the case of any exception.
      */
-    public static <T> T wrapResource(Callable<T> wrapperFactory, Closeable resource) throws IOException
-    {
+    public static <T> T wrapResource(Callable<T> wrapperFactory, Closeable resource)
+            throws IOException {
         try {
             return wrapperFactory.call();
-        }
-        catch (Throwable throwable) {
+        } catch (Throwable throwable) {
             try {
                 resource.close();
-            }
-            catch (Throwable e1) {
+            } catch (Throwable e1) {
                 throwable.addSuppressed(e1);
             }
             Throwables.propagateIfPossible(throwable, IOException.class);

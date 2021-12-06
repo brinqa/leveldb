@@ -18,11 +18,10 @@
 
 package org.iq80.leveldb.table;
 
+import java.util.List;
 import org.iq80.leveldb.XFilterPolicy;
 import org.iq80.leveldb.util.Hash;
 import org.iq80.leveldb.util.Slice;
-
-import java.util.List;
 
 /**
  * BloomFilter policy
@@ -30,33 +29,28 @@ import java.util.List;
  * @author Honore Vasconcelos
  * @link https://github.com/google/leveldb/commit/85584d497e7b354853b72f450683d59fcf6b9c5c
  */
-public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPolicy, XFilterPolicy
-{
+public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPolicy, XFilterPolicy {
     private final int bitsPerKey;
     private final int k;
 
-    public BloomFilterPolicy(final int bitsPerKey)
-    {
+    public BloomFilterPolicy(final int bitsPerKey) {
         this.bitsPerKey = bitsPerKey;
         int k = (int) (bitsPerKey * 0.69);
         if (k < 1) {
             k = 1;
-        }
-        else if (k > 30) {
+        } else if (k > 30) {
             k = 30;
         }
         this.k = k;
     }
 
     @Override
-    public String name()
-    {
+    public String name() {
         return "leveldb.BuiltinBloomFilter2";
     }
 
     @Override
-    public byte[] createFilter(List<Slice> keys)
-    {
+    public byte[] createFilter(List<Slice> keys) {
         // Compute bloom filter size (in both bits and bytes)
         int bits = keys.size() * bitsPerKey;
 
@@ -76,7 +70,7 @@ public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPol
             // Use double-hashing to generate a sequence of hash values.
             // See analysis in [Kirsch,Mitzenmacher 2006].
             int h = bloomHash(key);
-            int delta = (h >>> 17) | (h << 15);  // Rotate right 17 bits
+            int delta = (h >>> 17) | (h << 15); // Rotate right 17 bits
             for (int j = 0; j < k; j++) {
                 int bitpos = (int) ((toLong(h)) % bits);
                 final int i = bitpos / 8;
@@ -87,14 +81,16 @@ public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPol
         return array;
     }
 
-    private int bloomHash(Slice data)
-    {
-        return Hash.hash(data.getRawArray(), data.getRawOffset(), data.length(), 0xbc9f1d34); //avoid data copy
+    private int bloomHash(Slice data) {
+        return Hash.hash(
+                data.getRawArray(),
+                data.getRawOffset(),
+                data.length(),
+                0xbc9f1d34); // avoid data copy
     }
 
     @Override
-    public boolean keyMayMatch(Slice key, Slice bloomFilter1)
-    {
+    public boolean keyMayMatch(Slice key, Slice bloomFilter1) {
         int len = bloomFilter1.length();
         byte[] data = bloomFilter1.getRawArray();
         int offset = bloomFilter1.getRawOffset();
@@ -114,7 +110,7 @@ public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPol
         }
 
         int h = bloomHash(key);
-        int delta = (h >>> 17) | (h << 15);  // Rotate right 17 bits
+        int delta = (h >>> 17) | (h << 15); // Rotate right 17 bits
         for (int j = 0; j < k; j++) {
             int bitpos = (int) (toLong(h) % bits);
             if ((data[offset + (bitpos / 8)] & (1 << (bitpos % 8))) == 0) {
@@ -125,11 +121,8 @@ public final class BloomFilterPolicy implements org.iq80.leveldb.table.FilterPol
         return true;
     }
 
-    /**
-     * Convert an unsigned int into a long
-     */
-    private long toLong(int h)
-    {
+    /** Convert an unsigned int into a long */
+    private long toLong(int h) {
         return h & 0xffffffffL;
     }
 }

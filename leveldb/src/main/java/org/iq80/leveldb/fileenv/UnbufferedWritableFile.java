@@ -17,57 +17,45 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.env.WritableFile;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Slice;
 
-/**
- * @author Honore Vasconcelos
- */
-class UnbufferedWritableFile implements WritableFile
-{
+/** @author Honore Vasconcelos */
+class UnbufferedWritableFile implements WritableFile {
     private final File file;
     private final FileChannel channel;
 
-    private UnbufferedWritableFile(File file, FileChannel channel)
-    {
+    private UnbufferedWritableFile(File file, FileChannel channel) {
         this.file = file;
         this.channel = channel;
     }
 
-    public static WritableFile open(File file, boolean append) throws FileNotFoundException
-    {
+    public static WritableFile open(File file, boolean append) throws FileNotFoundException {
         return new UnbufferedWritableFile(file, new FileOutputStream(file, append).getChannel());
     }
 
     @Override
-    public void append(Slice data) throws IOException
-    {
+    public void append(Slice data) throws IOException {
         channel.write(data.toByteBuffer());
     }
 
     @Override
-    public void force() throws IOException
-    {
+    public void force() throws IOException {
         channel.force(false);
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         channel.close();
     }
 
     @Override
-    public String toString()
-    {
-        return "UnbufferedWritableFile{" +
-                "file=" + file +
-                '}';
+    public String toString() {
+        return "UnbufferedWritableFile{" + "file=" + file + '}';
     }
 }

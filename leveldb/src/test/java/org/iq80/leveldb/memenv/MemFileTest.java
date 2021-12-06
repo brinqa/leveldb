@@ -17,20 +17,17 @@
  */
 package org.iq80.leveldb.memenv;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import java.util.Collections;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 
-public class MemFileTest
-{
+import java.util.Collections;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+public class MemFileTest {
     @Test
-    public void testEquals()
-    {
+    public void testEquals() {
         MemFs fs = new MemFs();
         MemFile ab = MemFile.createMemFile(fs, "/a/b");
         MemFile abParent = ab.getParentFile();
@@ -53,8 +50,7 @@ public class MemFileTest
     }
 
     @Test
-    public void testParent()
-    {
+    public void testParent() {
         MemFs fs = new MemFs();
         MemFile ab = MemFile.createMemFile(fs, "/a/b/c");
         MemFile p = ab.getParentFile();
@@ -68,8 +64,7 @@ public class MemFileTest
     }
 
     @Test
-    public void testDefault()
-    {
+    public void testDefault() {
         MemFile ab = MemFile.createMemFile(new MemFs(), "/a/b");
         assertEquals(ab.getName(), "b");
         assertEquals(ab.getPath(), "/a/b");
@@ -80,8 +75,7 @@ public class MemFileTest
         Assert.assertThrows(() -> ab.child("/invalid"));
     }
 
-    private static void assertEqualsFile(MemFile f1, MemFile f2)
-    {
+    private static void assertEqualsFile(MemFile f1, MemFile f2) {
         assertEquals(f1, f2);
         assertEquals(f1.getName(), f2.getName());
         assertEquals(f1.getPath(), f2.getPath());

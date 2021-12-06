@@ -19,8 +19,7 @@ package org.iq80.leveldb.env;
 
 import java.util.List;
 
-public interface File
-{
+public interface File {
     /**
      * Resolve the given path against this path.
      *
@@ -30,12 +29,11 @@ public interface File
     File child(String other);
 
     /**
-     * Creates the directory named by this file, including any
-     * necessary but nonexistent parent directories.
+     * Creates the directory named by this file, including any necessary but nonexistent parent
+     * directories.
      *
-     * @return {@code true} if and only if the directory was created,
-     * along with all necessary parent directories; {@code false}
-     * otherwise
+     * @return {@code true} if and only if the directory was created, along with all necessary
+     *     parent directories; {@code false} otherwise
      */
     boolean mkdirs();
 
@@ -53,9 +51,7 @@ public interface File
 
     boolean isFile();
 
-    /**
-     * @return File size or {@code 0L} if file does not exist
-     */
+    /** @return File size or {@code 0L} if file does not exist */
     long length();
 
     boolean delete();
@@ -66,8 +62,8 @@ public interface File
 
     /**
      * Delete this file and all its contained files and directories.
-     * @return {@code true} if all content and this file where deleted, {@code false}
-     * otherwise
+     *
+     * @return {@code true} if all content and this file where deleted, {@code false} otherwise
      */
     boolean deleteRecursively();
 }

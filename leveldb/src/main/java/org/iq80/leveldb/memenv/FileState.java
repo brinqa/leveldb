@@ -18,20 +18,16 @@
 package org.iq80.leveldb.memenv;
 
 import com.google.common.base.Preconditions;
-import org.iq80.leveldb.util.Slice;
-
 import java.io.IOException;
 import java.util.Arrays;
+import org.iq80.leveldb.util.Slice;
 
-/**
- * File content.
- */
-class FileState
-{
+/** File content. */
+class FileState {
     private static final int BLOCK_SIZE = 8 * 1024;
     // TODO switch to RW lock. we need concurrent read only
     private final Object lock = new Object();
-    //file lock
+    // file lock
     private boolean locked = false;
     private int size = 0;
     private byte[][] content;
@@ -41,8 +37,7 @@ class FileState
      *
      * @return current file size
      */
-    public long length()
-    {
+    public long length() {
         synchronized (lock) {
             return size;
         }
@@ -53,8 +48,7 @@ class FileState
      *
      * @return slef file
      */
-    public FileState truncate()
-    {
+    public FileState truncate() {
         synchronized (lock) {
             content = null;
             size = 0;
@@ -66,19 +60,18 @@ class FileState
      * Read some content from file
      *
      * @param offset data offset
-     * @param n      at most number of bytes to read
+     * @param n at most number of bytes to read
      * @return read bytes or {@code null} if EOF is reached
      * @throws IOException on any "IO" error
      */
-    public byte[] read(long offset, int n) throws IOException
-    {
+    public byte[] read(long offset, int n) throws IOException {
         synchronized (lock) {
             if (offset > size) {
                 throw new IOException("Offset greater than file size.");
             }
             long available = size - offset;
             if (n != 0 && available == 0) {
-                return null; //EOF
+                return null; // EOF
             }
             if (n > available) {
                 n = (int) available;
@@ -112,10 +105,9 @@ class FileState
      *
      * @param data content to append
      */
-    public void append(Slice data)
-    {
+    public void append(Slice data) {
         int srcLen = data.length();
-        //avoid 2 copy
+        // avoid 2 copy
         byte[] src = data.getRawArray();
         int srcPos = data.getRawOffset();
         synchronized (lock) {
@@ -126,8 +118,7 @@ class FileState
                 if (offset != 0) {
                     // There is some room in the last block.
                     avail = BLOCK_SIZE - offset;
-                }
-                else {
+                } else {
                     // No room in the last block; push new one.
                     addBlock(new byte[BLOCK_SIZE]);
                     avail = BLOCK_SIZE;
@@ -144,12 +135,10 @@ class FileState
         }
     }
 
-    private void addBlock(byte[] bytes)
-    {
+    private void addBlock(byte[] bytes) {
         if (content == null) {
             content = new byte[1][];
-        }
-        else {
+        } else {
             content = Arrays.copyOf(content, content.length + 1);
         }
         content[content.length - 1] = bytes;
@@ -160,8 +149,7 @@ class FileState
      *
      * @return {@code true} If file locked
      */
-    public boolean isLocked()
-    {
+    public boolean isLocked() {
         synchronized (lock) {
             return locked;
         }
@@ -172,8 +160,7 @@ class FileState
      *
      * @param locked new lock state
      */
-    public void setLocked(boolean locked)
-    {
+    public void setLocked(boolean locked) {
         synchronized (lock) {
             this.locked = locked;
         }

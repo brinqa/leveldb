@@ -17,29 +17,27 @@
  */
 package org.iq80.leveldb.table;
 
+import static com.google.common.base.Preconditions.checkState;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
 import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.Options;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Compression;
 import org.iq80.leveldb.util.PureJavaCrc32C;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
-import org.iq80.leveldb.util.Snappy;
-import org.iq80.leveldb.env.WritableFile;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-public class TableBuilder
-{
+public class TableBuilder {
     /**
-     * TABLE_MAGIC_NUMBER was picked by running
-     * echo http://code.google.com/p/leveldb/ | sha1sum
-     * and taking the leading 64 bits.
+     * TABLE_MAGIC_NUMBER was picked by running echo http://code.google.com/p/leveldb/ | sha1sum and
+     * taking the leading 64 bits.
      */
     public static final long TABLE_MAGIC_NUMBER = 0xdb4775248b80fb57L;
-    private static final Charset CHARSET = Charset.forName("UTF-8");
+
+    private static final int MIN_SIZE_COMPRESSION = 1024;
 
     private final int blockRestartInterval;
     private final int blockSize;
@@ -65,14 +63,13 @@ public class TableBuilder
     // entries in the first block and < all entries in subsequent
     // blocks.
     private boolean pendingIndexEntry;
-    private BlockHandle pendingHandle;  // Handle to add to index block
+    private BlockHandle pendingHandle; // Handle to add to index block
 
     private Slice compressedOutput;
 
     private long position;
 
-    public TableBuilder(Options options, WritableFile file, UserComparator userComparator)
-    {
+    public TableBuilder(Options options, WritableFile file, UserComparator userComparator) {
         requireNonNull(options, "options is null");
         requireNonNull(file, "file is null");
 
@@ -83,43 +80,42 @@ public class TableBuilder
         blockSize = options.blockSize();
         compressionType = options.compressionType();
 
-        dataBlockBuilder = new BlockBuilder((int) Math.min(blockSize * 1.1, options.maxFileSize()), blockRestartInterval, userComparator);
+        dataBlockBuilder =
+                new BlockBuilder(
+                        (int) Math.min(blockSize * 1.1, options.maxFileSize()),
+                        blockRestartInterval,
+                        userComparator);
 
         // with expected 50% compression
         int expectedNumberOfBlocks = 1024;
-        indexBlockBuilder = new BlockBuilder(BlockHandle.MAX_ENCODED_LENGTH * expectedNumberOfBlocks, 1, userComparator);
+        indexBlockBuilder =
+                new BlockBuilder(
+                        BlockHandle.MAX_ENCODED_LENGTH * expectedNumberOfBlocks, 1, userComparator);
 
         lastKey = Slices.EMPTY_SLICE;
 
         if (options.filterPolicy() != null) {
             filterPolicyBuilder = new FilterBlockBuilder((FilterPolicy) options.filterPolicy());
             filterPolicyBuilder.startBlock(0);
-        }
-        else {
+        } else {
             filterPolicyBuilder = null;
         }
     }
 
-    public long getEntryCount()
-    {
+    public long getEntryCount() {
         return entryCount;
     }
 
-    public long getFileSize()
-    {
+    public long getFileSize() {
         return position;
     }
 
-    public void add(BlockEntry blockEntry)
-            throws IOException
-    {
+    public void add(BlockEntry blockEntry) throws IOException {
         requireNonNull(blockEntry, "blockEntry is null");
         add(blockEntry.getKey(), blockEntry.getValue());
     }
 
-    public void add(Slice key, Slice value)
-            throws IOException
-    {
+    public void add(Slice key, Slice value) throws IOException {
         requireNonNull(key, "key is null");
         requireNonNull(value, "value is null");
 
@@ -131,7 +127,9 @@ public class TableBuilder
 
         // If we just wrote a block, we can now add the handle to index block
         if (pendingIndexEntry) {
-            checkState(dataBlockBuilder.isEmpty(), "Internal error: Table has a pending index entry but data block builder is empty");
+            checkState(
+                    dataBlockBuilder.isEmpty(),
+                    "Internal error: Table has a pending index entry but data block builder is empty");
 
             Slice shortestSeparator = userComparator.findShortestSeparator(lastKey, key);
 
@@ -154,15 +152,15 @@ public class TableBuilder
         }
     }
 
-    private void flush()
-            throws IOException
-    {
+    private void flush() throws IOException {
         checkState(!closed, "table is finished");
         if (dataBlockBuilder.isEmpty()) {
             return;
         }
 
-        checkState(!pendingIndexEntry, "Internal error: Table already has a pending index entry to flush");
+        checkState(
+                !pendingIndexEntry,
+                "Internal error: Table already has a pending index entry to flush");
 
         pendingHandle = writeBlock(dataBlockBuilder);
 
@@ -173,9 +171,7 @@ public class TableBuilder
         pendingIndexEntry = true;
     }
 
-    private BlockHandle writeBlock(BlockBuilder blockBuilder)
-            throws IOException
-    {
+    private BlockHandle writeBlock(BlockBuilder blockBuilder) throws IOException {
         // close the block
         Slice raw = blockBuilder.finish();
         BlockHandle blockHandle = writeRawBlock(raw);
@@ -186,29 +182,31 @@ public class TableBuilder
         return blockHandle;
     }
 
-    private BlockHandle writeRawBlock(Slice raw) throws IOException
-    {
+    private BlockHandle writeRawBlock(Slice raw) throws IOException {
         // attempt to compress the block
         Slice blockContents = raw;
         CompressionType blockCompressionType = CompressionType.NONE;
-        if (compressionType == CompressionType.SNAPPY) {
-            ensureCompressedOutputCapacity(maxCompressedLength(raw.length()));
-            try {
-                int compressedSize = Snappy.compress(raw.getRawArray(), raw.getRawOffset(), raw.length(), compressedOutput.getRawArray(), 0);
+        if (compressionType == CompressionType.LZ4 && raw.length() > MIN_SIZE_COMPRESSION) {
+            int max = Compression.maxCompressedLength(raw.length());
+            ensureCompressedOutputCapacity(max);
+            int compressedSize =
+                    Compression.compress(
+                            raw.getRawArray(),
+                            raw.getRawOffset(),
+                            raw.length(),
+                            compressedOutput.getRawArray(),
+                            0);
 
-                // Don't use the compressed data if compressed less than 12.5%,
-                if (compressedSize < raw.length() - (raw.length() / 8)) {
-                    blockContents = compressedOutput.slice(0, compressedSize);
-                    blockCompressionType = CompressionType.SNAPPY;
-                }
-            }
-            catch (IOException ignored) {
-                // compression failed, so just store uncompressed form
+            // Don't use the compressed data if compressed less than 12.5%,
+            if (compressedSize < raw.length() - (raw.length() / 8)) {
+                blockContents = compressedOutput.slice(0, compressedSize);
+                blockCompressionType = CompressionType.LZ4;
             }
         }
 
         // create block trailer
-        BlockTrailer blockTrailer = new BlockTrailer(blockCompressionType, crc32c(blockContents, blockCompressionType));
+        BlockTrailer blockTrailer =
+                new BlockTrailer(blockCompressionType, crc32c(blockContents, blockCompressionType));
         Slice trailer = BlockTrailer.writeBlockTrailer(blockTrailer);
 
         // create a handle to this block
@@ -221,34 +219,7 @@ public class TableBuilder
         return blockHandle;
     }
 
-    private static int maxCompressedLength(int length)
-    {
-        // Compressed data can be defined as:
-        //    compressed := item* literal*
-        //    item       := literal* copy
-        //
-        // The trailing literal sequence has a space blowup of at most 62/60
-        // since a literal of length 60 needs one tag byte + one extra byte
-        // for length information.
-        //
-        // Item blowup is trickier to measure.  Suppose the "copy" op copies
-        // 4 bytes of data.  Because of a special check in the encoding code,
-        // we produce a 4-byte copy only if the offset is < 65536.  Therefore
-        // the copy op takes 3 bytes to encode, and this type of item leads
-        // to at most the 62/60 blowup for representing literals.
-        //
-        // Suppose the "copy" op copies 5 bytes of data.  If the offset is big
-        // enough, it will take 5 bytes to encode the copy op.  Therefore the
-        // worst case here is a one-byte literal followed by a five-byte copy.
-        // I.e., 6 bytes of input turn into 7 bytes of "compressed" data.
-        //
-        // This last factor dominates the blowup, so the final estimate is:
-        return 32 + length + (length / 6);
-    }
-
-    public void finish()
-            throws IOException
-    {
+    public void finish() throws IOException {
         checkState(!closed, "table is finished");
 
         // flush current data block
@@ -264,10 +235,13 @@ public class TableBuilder
         }
 
         // write (empty) meta index block
-        BlockBuilder metaIndexBlockBuilder = new BlockBuilder(256, blockRestartInterval, new BytewiseComparator());
+        BlockBuilder metaIndexBlockBuilder =
+                new BlockBuilder(256, blockRestartInterval, new BytewiseComparator());
 
         if (filterBlockHandle != null) {
-            metaIndexBlockBuilder.add(new Slice(("filter." + filterPolicyBuilder.name()).getBytes(CHARSET)), BlockHandle.writeBlockHandle(filterBlockHandle));
+            metaIndexBlockBuilder.add(
+                    new Slice(("filter." + filterPolicyBuilder.name()).getBytes(UTF_8)),
+                    BlockHandle.writeBlockHandle(filterBlockHandle));
         }
 
         BlockHandle metaindexBlockHandle = writeBlock(metaIndexBlockBuilder);
@@ -291,22 +265,19 @@ public class TableBuilder
         position += footerEncoding.length();
     }
 
-    public void abandon()
-    {
+    public void abandon() {
         checkState(!closed, "table is finished");
         closed = true;
     }
 
-    public static int crc32c(Slice data, CompressionType type)
-    {
+    public static int crc32c(Slice data, CompressionType type) {
         PureJavaCrc32C crc32c = new PureJavaCrc32C();
         crc32c.update(data.getRawArray(), data.getRawOffset(), data.length());
         crc32c.update(type.persistentId() & 0xFF);
         return crc32c.getMaskedValue();
     }
 
-    public void ensureCompressedOutputCapacity(int capacity)
-    {
+    public void ensureCompressedOutputCapacity(int capacity) {
         if (compressedOutput != null && compressedOutput.length() > capacity) {
             return;
         }

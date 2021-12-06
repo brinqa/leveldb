@@ -17,40 +17,43 @@
  */
 package org.iq80.leveldb.impl;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.iterator.SeekingIterator;
-import org.iq80.leveldb.iterator.SeekingIterators;
-import org.iq80.leveldb.table.UserComparator;
-import org.iq80.leveldb.iterator.InternalIterator;
-import org.iq80.leveldb.iterator.MergingIterator;
-import org.iq80.leveldb.util.SafeListBuilder;
-import org.iq80.leveldb.util.Slice;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+import static org.iq80.leveldb.impl.SequenceNumber.MAX_SEQUENCE_NUMBER;
+import static org.iq80.leveldb.impl.ValueType.VALUE;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-import static org.iq80.leveldb.impl.SequenceNumber.MAX_SEQUENCE_NUMBER;
-import static org.iq80.leveldb.impl.ValueType.VALUE;
+import org.iq80.leveldb.DBException;
+import org.iq80.leveldb.ReadOptions;
+import org.iq80.leveldb.iterator.InternalIterator;
+import org.iq80.leveldb.iterator.MergingIterator;
+import org.iq80.leveldb.iterator.SeekingIterator;
+import org.iq80.leveldb.iterator.SeekingIterators;
+import org.iq80.leveldb.table.UserComparator;
+import org.iq80.leveldb.util.SafeListBuilder;
+import org.iq80.leveldb.util.Slice;
 
 // todo this class should be immutable
-public class Level
-{
-    public static final Comparator<FileMetaData> NEWEST_FIRST = (fileMetaData, fileMetaData1) -> (int) (fileMetaData1.getNumber() - fileMetaData.getNumber());
+public class Level {
+    public static final Comparator<FileMetaData> NEWEST_FIRST =
+            (fileMetaData, fileMetaData1) ->
+                    (int) (fileMetaData1.getNumber() - fileMetaData.getNumber());
     private final int levelNumber;
     private final TableCache tableCache;
     private final InternalKeyComparator internalKeyComparator;
     private final List<FileMetaData> files;
 
-    public Level(int levelNumber, Collection<FileMetaData> files, TableCache tableCache, InternalKeyComparator internalKeyComparator)
-    {
+    public Level(
+            int levelNumber,
+            Collection<FileMetaData> files,
+            TableCache tableCache,
+            InternalKeyComparator internalKeyComparator) {
         checkArgument(levelNumber >= 0, "levelNumber is negative");
         requireNonNull(files, "files is null");
         requireNonNull(tableCache, "tableCache is null");
@@ -62,18 +65,15 @@ public class Level
         this.levelNumber = levelNumber;
     }
 
-    public int getLevelNumber()
-    {
+    public int getLevelNumber() {
         return levelNumber;
     }
 
-    public List<FileMetaData> getFiles()
-    {
+    public List<FileMetaData> getFiles() {
         return files;
     }
 
-    public InternalIterator iterator(ReadOptions options) throws IOException
-    {
+    public InternalIterator iterator(ReadOptions options) throws IOException {
         if (levelNumber == 0) {
             try (SafeListBuilder<InternalIterator> builder = SafeListBuilder.builder()) {
                 for (FileMetaData file : files) {
@@ -81,33 +81,39 @@ public class Level
                 }
                 return new MergingIterator(builder.build(), internalKeyComparator);
             }
-        }
-        else {
+        } else {
             return createLevelConcatIterator(tableCache, files, internalKeyComparator, options);
         }
     }
 
-    public static InternalIterator createLevelConcatIterator(TableCache tableCache, List<FileMetaData> files, InternalKeyComparator internalKeyComparator, ReadOptions options)
-    {
-        SeekingIterator<InternalKey, FileMetaData> iterator = SeekingIterators.fromSortedList(files, FileMetaData::getLargest, f -> f, internalKeyComparator);
-        return SeekingIterators.twoLevelInternalIterator(iterator, fileMetaData -> {
-            try {
-                return tableCache.newIterator(fileMetaData, options);
-            }
-            catch (IOException e) {
-                throw new DBException(e);
-            }
-        }, () -> {
-        });
+    public static InternalIterator createLevelConcatIterator(
+            TableCache tableCache,
+            List<FileMetaData> files,
+            InternalKeyComparator internalKeyComparator,
+            ReadOptions options) {
+        SeekingIterator<InternalKey, FileMetaData> iterator =
+                SeekingIterators.fromSortedList(
+                        files, FileMetaData::getLargest, f -> f, internalKeyComparator);
+        return SeekingIterators.twoLevelInternalIterator(
+                iterator,
+                fileMetaData -> {
+                    try {
+                        return tableCache.newIterator(fileMetaData, options);
+                    } catch (IOException e) {
+                        throw new DBException(e);
+                    }
+                },
+                () -> {});
     }
 
-    public LookupResult get(ReadOptions options, LookupKey key, ReadStats readStats, ReadStats lasReadFile)
-    {
+    public LookupResult get(
+            ReadOptions options, LookupKey key, ReadStats readStats, ReadStats lasReadFile) {
         if (files.isEmpty()) {
             return null;
         }
 
-        List<FileMetaData> fileMetaDataList = getFilesForKey(key.getUserKey(), key.getInternalKey());
+        List<FileMetaData> fileMetaDataList =
+                getFilesForKey(key.getUserKey(), key.getInternalKey());
         if (fileMetaDataList.isEmpty()) {
             return null;
         }
@@ -122,7 +128,12 @@ public class Level
             lasReadFile.setSeekFile(fileMetaData);
             lasReadFile.setSeekFileLevel(levelNumber);
 
-            final LookupResult lookupResult = tableCache.get(options, key.getInternalKey().encode(), fileMetaData, new KeyMatchingLookup(key));
+            final LookupResult lookupResult =
+                    tableCache.get(
+                            options,
+                            key.getInternalKey().encode(),
+                            fileMetaData,
+                            new KeyMatchingLookup(key));
             if (lookupResult != null) {
                 return lookupResult;
             }
@@ -131,14 +142,14 @@ public class Level
         return null;
     }
 
-    public List<FileMetaData> getFilesForKey(Slice userKey, InternalKey internalKey)
-    {
+    public List<FileMetaData> getFilesForKey(Slice userKey, InternalKey internalKey) {
         final UserComparator userComparator = internalKeyComparator.getUserComparator();
         if (levelNumber == 0) {
             final List<FileMetaData> fileMetaDataList = new ArrayList<>(files.size());
             for (FileMetaData fileMetaData : files) {
-                if (userComparator.compare(userKey, fileMetaData.getSmallest().getUserKey()) >= 0 &&
-                        userComparator.compare(userKey, fileMetaData.getLargest().getUserKey()) <= 0) {
+                if (userComparator.compare(userKey, fileMetaData.getSmallest().getUserKey()) >= 0
+                        && userComparator.compare(userKey, fileMetaData.getLargest().getUserKey())
+                                <= 0) {
                     fileMetaDataList.add(fileMetaData);
                 }
             }
@@ -147,8 +158,7 @@ public class Level
             }
             fileMetaDataList.sort(NEWEST_FIRST);
             return fileMetaDataList;
-        }
-        else {
+        } else {
             // Binary search to find earliest index whose largest key >= ikey.
             int index = findFile(internalKey);
 
@@ -168,25 +178,25 @@ public class Level
         }
     }
 
-    public boolean someFileOverlapsRange(boolean disjointSortedFiles, Slice smallestUserKey, Slice largestUserKey)
-    {
+    public boolean someFileOverlapsRange(
+            boolean disjointSortedFiles, Slice smallestUserKey, Slice largestUserKey) {
         UserComparator userComparator = internalKeyComparator.getUserComparator();
         if (!disjointSortedFiles) {
             // Need to check against all files
             for (FileMetaData file : files) {
-                if (afterFile(userComparator, smallestUserKey, file) ||
-                        beforeFile(userComparator, largestUserKey, file)) {
+                if (afterFile(userComparator, smallestUserKey, file)
+                        || beforeFile(userComparator, largestUserKey, file)) {
                     // No overlap
-                }
-                else {
-                    return true;  // Overlap
+                } else {
+                    return true; // Overlap
                 }
             }
             return false;
         }
         int index = 0;
         if (smallestUserKey != null) {
-            InternalKey smallestInternalKey = new InternalKey(smallestUserKey, MAX_SEQUENCE_NUMBER, VALUE);
+            InternalKey smallestInternalKey =
+                    new InternalKey(smallestUserKey, MAX_SEQUENCE_NUMBER, VALUE);
             index = findFile(smallestInternalKey);
         }
 
@@ -198,28 +208,26 @@ public class Level
         return !beforeFile(userComparator, largestUserKey, files.get(index));
     }
 
-    private boolean beforeFile(UserComparator userComparator, Slice userKey, FileMetaData file)
-    {
+    private boolean beforeFile(UserComparator userComparator, Slice userKey, FileMetaData file) {
         // null userKey occurs after all keys and is therefore never before *f
-        return (userKey != null &&
-                userComparator.compare(userKey, file.getSmallest().getUserKey()) < 0);
+        return (userKey != null
+                && userComparator.compare(userKey, file.getSmallest().getUserKey()) < 0);
     }
 
-    private boolean afterFile(UserComparator userComparator, Slice userKey, FileMetaData file)
-    {
+    private boolean afterFile(UserComparator userComparator, Slice userKey, FileMetaData file) {
         // NULL user_key occurs before all keys and is therefore never after *f
-        return (userKey != null &&
-                userComparator.compare(userKey, file.getLargest().getUserKey()) > 0);
+        return (userKey != null
+                && userComparator.compare(userKey, file.getLargest().getUserKey()) > 0);
     }
 
     @VisibleForTesting
-    int findFile(InternalKey targetKey)
-    {
+    int findFile(InternalKey targetKey) {
         // todo replace with Collections.binarySearch
         int left = 0;
         int right = files.size();
 
-        // binary search restart positions to find the restart position immediately before the targetKey
+        // binary search restart positions to find the restart position immediately before the
+        // targetKey
         while (left < right) {
             int mid = (left + right) / 2;
 
@@ -227,8 +235,7 @@ public class Level
                 // Key at "mid.largest" is < "target".  Therefore all
                 // files at or before "mid" are uninteresting.
                 left = mid + 1;
-            }
-            else {
+            } else {
                 // Key at "mid.largest" is >= "target".  Therefore all files
                 // after "mid" are uninteresting.
                 right = mid;
@@ -237,15 +244,13 @@ public class Level
         return right;
     }
 
-    public void addFile(FileMetaData fileMetaData)
-    {
+    public void addFile(FileMetaData fileMetaData) {
         // todo remove mutation
         files.add(fileMetaData);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Level");
         sb.append("{levelNumber=").append(levelNumber);

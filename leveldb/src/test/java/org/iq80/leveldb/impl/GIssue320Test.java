@@ -17,7 +17,14 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.testng.Assert.assertFalse;
+
 import com.google.common.collect.Maps;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Random;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.Snapshot;
@@ -31,40 +38,31 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Random;
-
-import static org.testng.Assert.assertFalse;
-
-public class GIssue320Test
-{
+public class GIssue320Test {
     private Random rand;
     private DB db;
     private File databaseDir;
 
     @BeforeMethod
-    public void setUp()
-    {
+    public void setUp() {
         rand = new Random(0);
         databaseDir = FileUtils.createTempDir("leveldbIssues");
     }
 
     @AfterMethod
-    public void tearDown()
-    {
+    public void tearDown() {
         if (db != null) {
             Closeables.closeQuietly(db);
         }
         boolean b = FileUtils.deleteRecursively(databaseDir);
-        //assertion is specially useful in windows
-        assertFalse(!b && databaseDir.exists(), "Dir should be possible to delete! All files should have been released. Existing files: " + FileUtils.listFiles(databaseDir));
+        // assertion is specially useful in windows
+        assertFalse(
+                !b && databaseDir.exists(),
+                "Dir should be possible to delete! All files should have been released. Existing files: "
+                        + FileUtils.listFiles(databaseDir));
     }
 
-    private byte[] newString(int index)
-    {
+    private byte[] newString(int index) {
         int len = 1024;
         byte[] bytes = new byte[len];
         int i = 0;
@@ -80,12 +78,15 @@ public class GIssue320Test
     }
 
     @Test
-    public void testIssue320() throws IOException
-    {
+    public void testIssue320() throws IOException {
         Map.Entry<byte[], byte[]>[] testMap = new Map.Entry[10000];
         Snapshot[] snapshots = new Snapshot[100];
 
-        db = new DbImpl(new Options().createIfMissing(true), databaseDir.getAbsolutePath(), EnvImpl.createEnv());
+        db =
+                new DbImpl(
+                        new Options().createIfMissing(true),
+                        databaseDir.getAbsolutePath(),
+                        EnvImpl.createEnv());
 
         int targetSize = 10000;
         int numItems = 0;
@@ -98,27 +99,30 @@ public class GIssue320Test
 
             if (testMap[index] == null) {
                 numItems++;
-                testMap[index] =
-                        Maps.immutableEntry(newString(index), newString(index));
+                testMap[index] = Maps.immutableEntry(newString(index), newString(index));
                 batch.put(testMap[index].getKey(), testMap[index].getValue());
-            }
-            else {
+            } else {
                 byte[] oldValue = db.get(testMap[index].getKey());
                 if (!Arrays.equals(oldValue, testMap[index].getValue())) {
-                    Assert.fail("ERROR incorrect value returned by get"
-                            + " \ncount=" + count
-                            + " \nold value=" + new String(oldValue)
-                            + " \ntestMap[index].getValue()=" + new String(testMap[index].getValue())
-                            + " \ntestMap[index].getKey()=" + new String(testMap[index].getKey())
-                            + " \nindex=" + index);
+                    Assert.fail(
+                            "ERROR incorrect value returned by get"
+                                    + " \ncount="
+                                    + count
+                                    + " \nold value="
+                                    + new String(oldValue)
+                                    + " \ntestMap[index].getValue()="
+                                    + new String(testMap[index].getValue())
+                                    + " \ntestMap[index].getKey()="
+                                    + new String(testMap[index].getKey())
+                                    + " \nindex="
+                                    + index);
                 }
 
                 if (numItems >= targetSize && rand.nextInt(100) > 30) {
                     batch.delete(testMap[index].getKey());
                     testMap[index] = null;
                     --numItems;
-                }
-                else {
+                } else {
                     testMap[index] = Maps.immutableEntry(testMap[index].getKey(), newString(index));
                     batch.put(testMap[index].getKey(), testMap[index].getValue());
                 }

@@ -17,6 +17,10 @@
  */
 package org.iq80.leveldb.memenv;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.env.DbLock;
 import org.iq80.leveldb.env.Env;
@@ -27,74 +31,58 @@ import org.iq80.leveldb.env.SequentialFile;
 import org.iq80.leveldb.env.WritableFile;
 import org.iq80.leveldb.util.Slices;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-/**
- * Environment that stores its data in memory
- */
-public class MemEnv implements Env
-{
+/** Environment that stores its data in memory */
+public class MemEnv implements Env {
     private final MemFs fs = new MemFs();
 
-    public static Env createEnv()
-    {
+    public static Env createEnv() {
         return new MemEnv();
     }
 
     @Override
-    public long nowMicros()
-    {
+    public long nowMicros() {
         return TimeUnit.NANOSECONDS.toMicros(System.nanoTime());
     }
 
     @Override
-    public File toFile(String filename)
-    {
+    public File toFile(String filename) {
         return MemFile.createMemFile(fs, filename);
     }
 
     @Override
-    public File createTempDir(String prefix)
-    {
+    public File createTempDir(String prefix) {
         return fs.createTempDir(prefix);
     }
 
     @Override
-    public SequentialFile newSequentialFile(File file) throws IOException
-    {
+    public SequentialFile newSequentialFile(File file) throws IOException {
         return new MemSequentialFile(fs.requireFile((MemFile) file));
     }
 
     @Override
-    public RandomInputFile newRandomAccessFile(File file) throws IOException
-    {
+    public RandomInputFile newRandomAccessFile(File file) throws IOException {
         return new MemRandomInputFile(file, fs.requireFile((MemFile) file));
     }
 
     @Override
-    public WritableFile newWritableFile(File file) throws IOException
-    {
+    public WritableFile newWritableFile(File file) throws IOException {
         return new MemWritableFile(fs.getOrCreateFile((MemFile) file));
     }
 
     @Override
-    public WritableFile newAppendableFile(File file) throws IOException
-    {
+    public WritableFile newAppendableFile(File file) throws IOException {
         return new MemWritableFile(fs.getOrCreateFile((MemFile) file));
     }
 
     @Override
-    public void writeStringToFileSync(File file, String content) throws IOException
-    {
-        fs.getOrCreateFile((MemFile) file).truncate().append(Slices.wrappedBuffer(content.getBytes(UTF_8)));
+    public void writeStringToFileSync(File file, String content) throws IOException {
+        fs.getOrCreateFile((MemFile) file)
+                .truncate()
+                .append(Slices.wrappedBuffer(content.getBytes(UTF_8)));
     }
 
     @Override
-    public String readFileToString(File file) throws IOException
-    {
+    public String readFileToString(File file) throws IOException {
         byte[] read = fs.requireFile((MemFile) file).read(0, (int) file.length());
         if (read == null) {
             throw new IOException("Could not read all the data");
@@ -103,14 +91,12 @@ public class MemEnv implements Env
     }
 
     @Override
-    public Logger newLogger(File loggerFile) throws IOException
-    {
+    public Logger newLogger(File loggerFile) throws IOException {
         return new NoOpLogger();
     }
 
     @Override
-    public DbLock tryLock(File file) throws IOException
-    {
+    public DbLock tryLock(File file) throws IOException {
         return fs.doLock(((MemFile) file));
     }
 }

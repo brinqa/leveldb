@@ -17,13 +17,11 @@
  */
 package org.iq80.leveldb.iterator;
 
+import java.io.IOException;
 import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.util.Slice;
 
-import java.io.IOException;
-
-public final class DbIterator implements InternalIterator
-{
+public final class DbIterator implements InternalIterator {
     /*
      * NOTE: This code has been specifically tuned for performance of the DB
      * iterator methods.  Before committing changes to this code, make sure
@@ -42,69 +40,58 @@ public final class DbIterator implements InternalIterator
     private final MergingIterator mergingIterator;
     private final Runnable cleanup;
 
-    public DbIterator(MergingIterator mergingIterator, Runnable cleanup)
-    {
+    public DbIterator(MergingIterator mergingIterator, Runnable cleanup) {
         this.mergingIterator = mergingIterator;
         this.cleanup = cleanup;
     }
 
     @Override
-    public void close() throws IOException
-    {
-        //end user api is protected against multiple close
+    public void close() throws IOException {
+        // end user api is protected against multiple close
         try {
             mergingIterator.close();
-        }
-        finally {
+        } finally {
             cleanup.run();
         }
     }
 
     @Override
-    public boolean valid()
-    {
+    public boolean valid() {
         return mergingIterator.valid();
     }
 
     @Override
-    public boolean seekToFirst()
-    {
+    public boolean seekToFirst() {
         return mergingIterator.seekToFirst();
     }
 
     @Override
-    public boolean seekToLast()
-    {
+    public boolean seekToLast() {
         return mergingIterator.seekToLast();
     }
 
     @Override
-    public boolean seek(InternalKey targetKey)
-    {
+    public boolean seek(InternalKey targetKey) {
         return mergingIterator.seek(targetKey);
     }
 
     @Override
-    public boolean next()
-    {
+    public boolean next() {
         return mergingIterator.next();
     }
 
     @Override
-    public boolean prev()
-    {
+    public boolean prev() {
         return mergingIterator.prev();
     }
 
     @Override
-    public InternalKey key()
-    {
+    public InternalKey key() {
         return mergingIterator.key();
     }
 
     @Override
-    public Slice value()
-    {
+    public Slice value() {
         return mergingIterator.value();
     }
 }

@@ -21,16 +21,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
-class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V>
-{
+class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V> {
     private final List<T> entries;
     private Function<T, K> keyExtractor;
     private Function<T, V> valueExtractor;
     private Comparator<K> comparator;
     private int index;
 
-    SortedCollectionIterator(List<T> entries, Function<T, K> keyExtractor, Function<T, V> valueExtractor, Comparator<K> comparator)
-    {
+    SortedCollectionIterator(
+            List<T> entries,
+            Function<T, K> keyExtractor,
+            Function<T, V> valueExtractor,
+            Comparator<K> comparator) {
         this.entries = entries;
         this.keyExtractor = keyExtractor;
         this.valueExtractor = valueExtractor;
@@ -39,14 +41,12 @@ class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V>
     }
 
     @Override
-    public void internalClose()
-    {
-        //na
+    public void internalClose() {
+        // na
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         if (entries.isEmpty()) {
             return false;
         }
@@ -55,31 +55,29 @@ class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V>
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         if (entries.isEmpty()) {
             return false;
-        }
-        else {
+        } else {
             index = entries.size() - 1;
             return true;
         }
     }
 
     @Override
-    protected boolean internalSeek(K targetKey)
-    {
+    protected boolean internalSeek(K targetKey) {
         // seek the index to the block containing the
         if (entries.isEmpty()) {
             return false;
         }
 
         // todo replace with Collections.binarySearch
-        //Collections.binarySearch(entries, comparator)
+        // Collections.binarySearch(entries, comparator)
         int left = 0;
         int right = entries.size() - 1;
 
-        // binary search restart positions to find the restart position immediately before the targetKey
+        // binary search restart positions to find the restart position immediately before the
+        // targetKey
         while (left < right) {
             int mid = (left + right) / 2;
 
@@ -87,8 +85,7 @@ class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V>
                 // Key at "mid.largest" is < "target".  Therefore all
                 // files at or before "mid" are uninteresting.
                 left = mid + 1;
-            }
-            else {
+            } else {
                 // Key at "mid.largest" is >= "target".  Therefore all files
                 // after "mid" are uninteresting.
                 right = mid;
@@ -97,41 +94,38 @@ class SortedCollectionIterator<T, K, V> extends ASeekingIterator<K, V>
         index = right;
 
         // if the index is now pointing to the last block in the file, check if the largest key
-        // in the block is than the the target key.  If so, we need to seek beyond the end of this file
-        if (index == entries.size() - 1 && comparator.compare(keyExtractor.apply(entries.get(index)), targetKey) < 0) {
+        // in the block is than the the target key.  If so, we need to seek beyond the end of this
+        // file
+        if (index == entries.size() - 1
+                && comparator.compare(keyExtractor.apply(entries.get(index)), targetKey) < 0) {
             index++;
         }
         return index < entries.size();
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         index++;
         return index < entries.size();
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         if (index == 0) {
             return false;
-        }
-        else {
+        } else {
             index--;
             return true;
         }
     }
 
     @Override
-    protected K internalKey()
-    {
+    protected K internalKey() {
         return keyExtractor.apply(entries.get(index));
     }
 
     @Override
-    protected V internalValue()
-    {
+    protected V internalValue() {
         return valueExtractor.apply(entries.get(index));
     }
 }

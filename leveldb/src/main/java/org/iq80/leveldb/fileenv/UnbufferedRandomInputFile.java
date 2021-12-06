@@ -17,7 +17,7 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.env.RandomInputFile;
+import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,51 +28,43 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import org.iq80.leveldb.env.RandomInputFile;
 
-import static java.util.Objects.requireNonNull;
-
-/**
- * @author Honore Vasconcelos
- */
-class UnbufferedRandomInputFile implements RandomInputFile
-{
-    private static final int MAX_RETRY = Integer.getInteger(" org.iq80.leveldb.FileChannel.RETRY", 1000);
+/** @author Honore Vasconcelos */
+class UnbufferedRandomInputFile implements RandomInputFile {
+    private static final int MAX_RETRY =
+            Integer.getInteger(" org.iq80.leveldb.FileChannel.RETRY", 1000);
     private final Object lock = new Object();
     private final File file;
     private volatile FileChannel fileChannel;
     private final long size;
     private boolean closed = false;
 
-    private UnbufferedRandomInputFile(File file, FileChannel fileChannel, long size)
-    {
+    private UnbufferedRandomInputFile(File file, FileChannel fileChannel, long size) {
         this.file = file;
         this.fileChannel = fileChannel;
         this.size = size;
     }
 
-    public static RandomInputFile open(File file) throws IOException
-    {
+    public static RandomInputFile open(File file) throws IOException {
         requireNonNull(file, "file is null");
         FileChannel channel = openChannel(file);
         return new UnbufferedRandomInputFile(file, channel, channel.size());
     }
 
-    private static FileChannel openChannel(File file) throws FileNotFoundException
-    {
+    private static FileChannel openChannel(File file) throws FileNotFoundException {
         return new FileInputStream(file).getChannel();
     }
 
     @Override
-    public long size()
-    {
+    public long size() {
         return size;
     }
 
     @Override
-    public ByteBuffer read(long offset, int length) throws IOException
-    {
+    public ByteBuffer read(long offset, int length) throws IOException {
         if (Thread.currentThread().isInterrupted()) {
-            throw new ClosedByInterruptException(); //do no close!
+            throw new ClosedByInterruptException(); // do no close!
         }
         ByteBuffer uncompressedBuffer = ByteBuffer.allocate(length).order(ByteOrder.LITTLE_ENDIAN);
         int maxRetry = MAX_RETRY;
@@ -85,11 +77,9 @@ class UnbufferedRandomInputFile implements RandomInputFile
                 }
                 uncompressedBuffer.clear();
                 return uncompressedBuffer;
-            }
-            catch (ClosedByInterruptException e) {
+            } catch (ClosedByInterruptException e) {
                 throw e;
-            }
-            catch (ClosedChannelException e) {
+            } catch (ClosedChannelException e) {
                 uncompressedBuffer.clear();
                 if (!reOpenChannel(fc)) {
                     throw new IOException("Channel closed by an other thread concurrently");
@@ -99,11 +89,10 @@ class UnbufferedRandomInputFile implements RandomInputFile
         throw new IOException("Unable to reopen file after close exception");
     }
 
-    private boolean reOpenChannel(FileChannel currentFc) throws FileNotFoundException
-    {
+    private boolean reOpenChannel(FileChannel currentFc) throws FileNotFoundException {
         synchronized (lock) {
             if (closed) {
-                //externally closed
+                // externally closed
                 return false;
             }
             if (this.fileChannel == currentFc) {
@@ -114,8 +103,7 @@ class UnbufferedRandomInputFile implements RandomInputFile
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         synchronized (lock) {
             if (closed) {
                 return;
@@ -126,11 +114,7 @@ class UnbufferedRandomInputFile implements RandomInputFile
     }
 
     @Override
-    public String toString()
-    {
-        return "FileTableDataSource{" +
-            "file='" + file + '\'' +
-            ", size=" + size +
-            '}';
+    public String toString() {
+        return "FileTableDataSource{" + "file='" + file + '\'' + ", size=" + size + '}';
     }
 }

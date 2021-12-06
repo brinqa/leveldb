@@ -17,17 +17,15 @@
  */
 package org.iq80.leveldb.memenv;
 
-import org.iq80.leveldb.env.File;
-import org.testng.annotations.Test;
-
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class MemFsTest
-{
+import org.iq80.leveldb.env.File;
+import org.testng.annotations.Test;
+
+public class MemFsTest {
     @Test
-    public void testListFiles()
-    {
+    public void testListFiles() {
         File abc = MemEnv.createEnv().createTempDir("prefix");
         assertTrue(abc.isDirectory());
         assertTrue(abc.exists());

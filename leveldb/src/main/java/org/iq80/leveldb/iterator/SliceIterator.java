@@ -19,6 +19,4 @@ package org.iq80.leveldb.iterator;
 
 import org.iq80.leveldb.util.Slice;
 
-public interface SliceIterator extends SeekingIterator<Slice, Slice>
-{
-}
+public interface SliceIterator extends SeekingIterator<Slice, Slice> {}

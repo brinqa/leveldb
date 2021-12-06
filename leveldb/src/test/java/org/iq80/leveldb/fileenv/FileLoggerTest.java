@@ -17,22 +17,19 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.Logger;
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Supplier;
+import org.iq80.leveldb.Logger;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-
-public class FileLoggerTest
-{
+public class FileLoggerTest {
     @Test
-    public void testFormatting() throws IOException
-    {
+    public void testFormatting() throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         LocalDateTime start = LocalDateTime.now();
         Logger fileLogger = FileLogger.createLogger(outputStream, new LocalDateTimeSupplier(start));
@@ -43,24 +40,24 @@ public class FileLoggerTest
         LocalDateTimeSupplier d = new LocalDateTimeSupplier(start);
         StringBuilder s = new StringBuilder();
         s.append(d.get()).append(' ').append("a bc ").append(System.lineSeparator());
-        s.append(d.get()).append(' ').append("without place [arg1, arg2]").append(System.lineSeparator());
+        s.append(d.get())
+                .append(' ')
+                .append("without place [arg1, arg2]")
+                .append(System.lineSeparator());
         s.append(d.get()).append(' ').append("- abc -").append(System.lineSeparator());
 
         assertEquals(new String(outputStream.toByteArray()), s.toString());
     }
 
-    private static class LocalDateTimeSupplier implements Supplier<LocalDateTime>
-    {
+    private static class LocalDateTimeSupplier implements Supplier<LocalDateTime> {
         LocalDateTime now;
 
-        public LocalDateTimeSupplier(LocalDateTime start)
-        {
+        public LocalDateTimeSupplier(LocalDateTime start) {
             now = start;
         }
 
         @Override
-        public LocalDateTime get()
-        {
+        public LocalDateTime get() {
             now = now.plus(1, ChronoUnit.SECONDS);
             return now;
         }

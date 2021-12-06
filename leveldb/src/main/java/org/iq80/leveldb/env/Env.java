@@ -17,16 +17,15 @@
  */
 package org.iq80.leveldb.env;
 
+import java.io.IOException;
 import org.iq80.leveldb.Logger;
 
-import java.io.IOException;
-
-public interface Env
-{
+public interface Env {
     long nowMicros();
 
     /**
      * Transform a file name into a {@link File} instance scoped to this {@link Env} instance
+     *
      * @param filename full file name
      * @return File instance
      */
@@ -34,6 +33,7 @@ public interface Env
 
     /**
      * Create a temporary directory in filesystem
+     *
      * @param prefix prefix to use as name
      * @return newly created directory
      */
@@ -48,8 +48,7 @@ public interface Env
     SequentialFile newSequentialFile(File file) throws IOException;
 
     /**
-     * Create a brand new random access read-only file with the
-     * specified file name.
+     * Create a brand new random access read-only file with the specified file name.
      *
      * @return new file that may be concurrently accessed by multiple threads.
      * @throws IOException If the file does not exist or inaccessible.
@@ -57,9 +56,9 @@ public interface Env
     RandomInputFile newRandomAccessFile(File file) throws IOException;
 
     /**
-     * Create an object that writes to a new file with the specified
-     * name.  Deletes any existing file with the same name and creates a
-     * new file.
+     * Create an object that writes to a new file with the specified name. Deletes any existing file
+     * with the same name and creates a new file.
+     *
      * <p>
      *
      * @return new file that can be accessed by one thread at a time.
@@ -68,13 +67,12 @@ public interface Env
     WritableFile newWritableFile(File file) throws IOException;
 
     /**
-     * Create an WritableFile that either appends to an existing file, or
-     * writes to a new file (if the file does not exist to begin with).
-     * <p>
-     * May return an IsNotSupportedError error if this Env does
-     * not allow appending to an existing file.  Users of Env (including
-     * the leveldb implementation) must be prepared to deal with
-     * an Env that does not support appending. TODO
+     * Create an WritableFile that either appends to an existing file, or writes to a new file (if
+     * the file does not exist to begin with).
+     *
+     * <p>May return an IsNotSupportedError error if this Env does not allow appending to an
+     * existing file. Users of Env (including the leveldb implementation) must be prepared to deal
+     * with an Env that does not support appending. TODO
      *
      * @return new or existing writable file only accessible by one thread at a time.
      * @throws IOException If the file is inaccessible.
@@ -83,6 +81,7 @@ public interface Env
 
     /**
      * Write {@code content} to file. Replace existing content.
+     *
      * @param file file location
      * @param content new content
      * @throws IOException If the file not writable.
@@ -91,6 +90,7 @@ public interface Env
 
     /**
      * Read full file content to string
+     *
      * @param file file location
      * @throws IOException If the file not readable.
      */
@@ -111,5 +111,5 @@ public interface Env
      * @return releasable db lock
      * @throws IOException If lock is already held or some other I/O error occurs
      */
-    DbLock tryLock(File lockFile) throws  IOException;
+    DbLock tryLock(File lockFile) throws IOException;
 }

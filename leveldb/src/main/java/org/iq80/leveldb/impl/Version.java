@@ -17,21 +17,6 @@
  */
 package org.iq80.leveldb.impl;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Multimap;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.iterator.InternalIterator;
-import org.iq80.leveldb.util.SafeListBuilder;
-import org.iq80.leveldb.util.Slice;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkPositionIndex;
 import static com.google.common.collect.Ordering.natural;
@@ -39,9 +24,22 @@ import static org.iq80.leveldb.impl.DbConstants.MAX_MEM_COMPACT_LEVEL;
 import static org.iq80.leveldb.impl.DbConstants.NUM_LEVELS;
 import static org.iq80.leveldb.impl.SequenceNumber.MAX_SEQUENCE_NUMBER;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.iq80.leveldb.ReadOptions;
+import org.iq80.leveldb.iterator.InternalIterator;
+import org.iq80.leveldb.util.SafeListBuilder;
+import org.iq80.leveldb.util.Slice;
+
 // todo this class should be immutable
-public class Version
-{
+public class Version {
     private final AtomicInteger retained = new AtomicInteger(1);
     private final VersionSet versionSet;
     private final List<Level> levels;
@@ -52,8 +50,7 @@ public class Version
     private FileMetaData fileToCompact;
     private int fileToCompactLevel;
 
-    public Version(VersionSet versionSet)
-    {
+    public Version(VersionSet versionSet) {
         this.versionSet = versionSet;
         checkArgument(NUM_LEVELS > 1, "levels must be at least 2");
         Builder<Level> builder = ImmutableList.builder();
@@ -64,8 +61,7 @@ public class Version
         this.levels = builder.build();
     }
 
-    public void assertNoOverlappingFiles(int level)
-    {
+    public void assertNoOverlappingFiles(int level) {
         if (level > 0) {
             Collection<FileMetaData> files = getFiles(level);
             if (files != null) {
@@ -73,10 +69,14 @@ public class Version
                 InternalKey previousEnd = null;
                 for (FileMetaData fileMetaData : files) {
                     if (previousEnd != null) {
-                        checkArgument(getInternalKeyComparator().compare(
-                                previousEnd,
-                                fileMetaData.getSmallest()
-                        ) < 0, "Overlapping files %s and %s in level %s", previousFileNumber, fileMetaData.getNumber(), level);
+                        checkArgument(
+                                getInternalKeyComparator()
+                                                .compare(previousEnd, fileMetaData.getSmallest())
+                                        < 0,
+                                "Overlapping files %s and %s in level %s",
+                                previousFileNumber,
+                                fileMetaData.getNumber(),
+                                level);
                     }
 
                     previousFileNumber = fileMetaData.getNumber();
@@ -86,43 +86,35 @@ public class Version
         }
     }
 
-    public VersionSet getVersionSet()
-    {
+    public VersionSet getVersionSet() {
         return versionSet;
     }
 
-    private TableCache getTableCache()
-    {
+    private TableCache getTableCache() {
         return versionSet.getTableCache();
     }
 
-    public final InternalKeyComparator getInternalKeyComparator()
-    {
+    public final InternalKeyComparator getInternalKeyComparator() {
         return versionSet.getInternalKeyComparator();
     }
 
-    public int getCompactionLevel()
-    {
+    public int getCompactionLevel() {
         return compactionLevel;
     }
 
-    public void setCompactionLevel(int compactionLevel)
-    {
+    public void setCompactionLevel(int compactionLevel) {
         this.compactionLevel = compactionLevel;
     }
 
-    public double getCompactionScore()
-    {
+    public double getCompactionScore() {
         return compactionScore;
     }
 
-    public void setCompactionScore(double compactionScore)
-    {
+    public void setCompactionScore(double compactionScore) {
         this.compactionScore = compactionScore;
     }
 
-    List<InternalIterator> getLevelIterators(ReadOptions options) throws IOException
-    {
+    List<InternalIterator> getLevelIterators(ReadOptions options) throws IOException {
         try (SafeListBuilder<InternalIterator> builder = SafeListBuilder.builder()) {
             for (Level level : levels) {
                 if (!level.getFiles().isEmpty()) {
@@ -133,8 +125,7 @@ public class Version
         }
     }
 
-    public LookupResult get(ReadOptions options, LookupKey key, ReadStats readStats)
-    {
+    public LookupResult get(ReadOptions options, LookupKey key, ReadStats readStats) {
         // We can search level-by-level since entries never hop across
         // levels.  Therefore we are guaranteed that if we find data
         // in a smaller level, later levels are irrelevant.
@@ -149,13 +140,13 @@ public class Version
         return lookupResult;
     }
 
-    int pickLevelForMemTableOutput(Slice smallestUserKey, Slice largestUserKey)
-    {
+    int pickLevelForMemTableOutput(Slice smallestUserKey, Slice largestUserKey) {
         int level = 0;
         if (!overlapInLevel(0, smallestUserKey, largestUserKey)) {
             // Push to next level if there is no overlap in next level,
             // and the #bytes overlapping in the level after that are limited.
-            InternalKey start = new InternalKey(smallestUserKey, MAX_SEQUENCE_NUMBER, ValueType.VALUE);
+            InternalKey start =
+                    new InternalKey(smallestUserKey, MAX_SEQUENCE_NUMBER, ValueType.VALUE);
             InternalKey limit = new InternalKey(largestUserKey, 0, ValueType.DELETION);
             while (level < MAX_MEM_COMPACT_LEVEL) {
                 if (overlapInLevel(level + 1, smallestUserKey, largestUserKey)) {
@@ -163,7 +154,9 @@ public class Version
                 }
                 if (level + 2 < DbConstants.NUM_LEVELS) {
                     // Check that file does not overlap too many grandparent bytes.
-                    long sum = Compaction.totalFileSize(versionSet.getOverlappingInputs(level + 2, start, limit));
+                    long sum =
+                            Compaction.totalFileSize(
+                                    versionSet.getOverlappingInputs(level + 2, start, limit));
                     if (sum > versionSet.maxGrandParentOverlapBytes()) {
                         break;
                     }
@@ -174,24 +167,20 @@ public class Version
         return level;
     }
 
-    public boolean overlapInLevel(int level, Slice smallestUserKey, Slice largestUserKey)
-    {
+    public boolean overlapInLevel(int level, Slice smallestUserKey, Slice largestUserKey) {
         checkPositionIndex(level, levels.size(), "Invalid level");
         return levels.get(level).someFileOverlapsRange(level > 0, smallestUserKey, largestUserKey);
     }
 
-    public int numberOfLevels()
-    {
+    public int numberOfLevels() {
         return levels.size();
     }
 
-    public int numberOfFilesInLevel(int level)
-    {
+    public int numberOfFilesInLevel(int level) {
         return getFiles(level).size();
     }
 
-    public Multimap<Integer, FileMetaData> getFiles()
-    {
+    public Multimap<Integer, FileMetaData> getFiles() {
         ImmutableMultimap.Builder<Integer, FileMetaData> builder = ImmutableMultimap.builder();
         builder = builder.orderKeysBy(natural());
         for (Level level : levels) {
@@ -200,18 +189,15 @@ public class Version
         return builder.build();
     }
 
-    public List<FileMetaData> getFiles(int level)
-    {
+    public List<FileMetaData> getFiles(int level) {
         return levels.get(level).getFiles();
     }
 
-    public void addFile(int level, FileMetaData fileMetaData)
-    {
+    public void addFile(int level, FileMetaData fileMetaData) {
         levels.get(level).addFile(fileMetaData);
     }
 
-    public boolean updateStats(ReadStats readStats)
-    {
+    public boolean updateStats(ReadStats readStats) {
         final int seekFileLevel = readStats.getSeekFileLevel();
         final FileMetaData seekFile = readStats.getSeekFile();
 
@@ -228,26 +214,23 @@ public class Version
         return false;
     }
 
-    public FileMetaData getFileToCompact()
-    {
+    public FileMetaData getFileToCompact() {
         return fileToCompact;
     }
 
-    public int getFileToCompactLevel()
-    {
+    public int getFileToCompactLevel() {
         return fileToCompactLevel;
     }
 
-    public long getApproximateOffsetOf(InternalKey key)
-    {
+    public long getApproximateOffsetOf(InternalKey key) {
         long result = 0;
         for (int level = 0; level < NUM_LEVELS; level++) {
             for (FileMetaData fileMetaData : getFiles(level)) {
                 if (getInternalKeyComparator().compare(fileMetaData.getLargest(), key) <= 0) {
                     // Entire file is before "ikey", so just add the file size
                     result += fileMetaData.getFileSize();
-                }
-                else if (getInternalKeyComparator().compare(fileMetaData.getSmallest(), key) > 0) {
+                } else if (getInternalKeyComparator().compare(fileMetaData.getSmallest(), key)
+                        > 0) {
                     // Entire file is after "ikey", so ignore
                     if (level > 0) {
                         // Files other than level 0 are sorted by meta.smallest, so
@@ -255,8 +238,7 @@ public class Version
                         // "ikey".
                         break;
                     }
-                }
-                else {
+                } else {
                     // "ikey" falls in the range for this table.  Add the
                     // approximate offset of "ikey" within the table.
                     result += getTableCache().getApproximateOffsetOf(fileMetaData, key.encode());
@@ -266,14 +248,12 @@ public class Version
         return result;
     }
 
-    public void retain()
-    {
+    public void retain() {
         int was = retained.getAndIncrement();
         assert was > 0 : "Version was retain after it was disposed.";
     }
 
-    public void release()
-    {
+    public void release() {
         int now = retained.decrementAndGet();
         assert now >= 0 : "Version was released after it was disposed.";
         if (now == 0) {
@@ -282,20 +262,19 @@ public class Version
         }
     }
 
-    public boolean recordReadSample(InternalKey internalKey)
-    {
+    public boolean recordReadSample(InternalKey internalKey) {
         // Holds first matching file
         ReadStats readStats = null;
         for (int level = 0; level < NUM_LEVELS; ++level) {
-            for (FileMetaData file : levels.get(level).getFilesForKey(internalKey.getUserKey(), internalKey)) {
+            for (FileMetaData file :
+                    levels.get(level).getFilesForKey(internalKey.getUserKey(), internalKey)) {
                 if (readStats != null) {
                     // Must have at least two matches since we want to merge across
                     // files. But what if we have a single file that contains many
                     // overwrites and deletions?  Should we have another mechanism for
                     // finding such files?
                     return updateStats(readStats);
-                }
-                else {
+                } else {
                     // Remember first match
                     readStats = new ReadStats(level, file);
                 }
@@ -305,8 +284,7 @@ public class Version
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         final StringBuilder r = new StringBuilder();
         for (Level level : levels) {
             r.append("--- level ");

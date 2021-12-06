@@ -17,8 +17,7 @@
  */
 package org.iq80.leveldb.iterator;
 
-enum Direction
-{
+enum Direction {
     START_OF_ITERATOR(false),
     RELEASED(false),
     END_OF_ITERATOR(false),
@@ -27,13 +26,11 @@ enum Direction
 
     private boolean valid;
 
-    Direction(boolean valid)
-    {
+    Direction(boolean valid) {
         this.valid = valid;
     }
 
-    public boolean isValid()
-    {
+    public boolean isValid() {
         return valid;
     }
 }

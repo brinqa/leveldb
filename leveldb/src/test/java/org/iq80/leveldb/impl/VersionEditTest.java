@@ -17,27 +17,29 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.util.Slice;
-import org.testng.annotations.Test;
-
 import static org.iq80.leveldb.util.TestUtils.asciiToSlice;
 import static org.testng.Assert.assertEquals;
 
-public class VersionEditTest
-{
+import org.iq80.leveldb.util.Slice;
+import org.testng.annotations.Test;
+
+public class VersionEditTest {
     @Test
-    public void testEncodeDecode() throws Exception
-    {
+    public void testEncodeDecode() throws Exception {
         long kBig = 1L << 50;
 
         VersionEdit edit = new VersionEdit();
         for (int i = 0; i < 4; i++) {
             testEncodeDecode(edit);
-            edit.addFile(3, kBig + 300 + i, kBig + 400 + i,
+            edit.addFile(
+                    3,
+                    kBig + 300 + i,
+                    kBig + 400 + i,
                     new InternalKey(asciiToSlice("foo"), kBig + 500 + i, ValueType.VALUE),
                     new InternalKey(asciiToSlice("zoo"), kBig + 600 + i, ValueType.DELETION));
             edit.deleteFile(4, kBig + 700 + i);
-            edit.setCompactPointer(i, new InternalKey(asciiToSlice("x"), kBig + 900 + i, ValueType.VALUE));
+            edit.setCompactPointer(
+                    i, new InternalKey(asciiToSlice("x"), kBig + 900 + i, ValueType.VALUE));
         }
 
         edit.setComparatorName("foo");
@@ -47,8 +49,7 @@ public class VersionEditTest
         testEncodeDecode(edit);
     }
 
-    void testEncodeDecode(VersionEdit edit)
-    {
+    void testEncodeDecode(VersionEdit edit) {
         Slice encoded = edit.encode();
         VersionEdit parsed = new VersionEdit(encoded);
         Slice encoded2 = parsed.encode();

@@ -17,35 +17,30 @@
  */
 package org.iq80.leveldb.memenv;
 
-import org.iq80.leveldb.env.File;
-import org.iq80.leveldb.env.RandomInputFile;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.RandomInputFile;
 
-class MemRandomInputFile implements RandomInputFile
-{
+class MemRandomInputFile implements RandomInputFile {
     private final File file;
     private final FileState fileState;
     private boolean closed;
 
-    public MemRandomInputFile(File file, FileState fileState)
-    {
+    public MemRandomInputFile(File file, FileState fileState) {
         this.file = file;
         this.fileState = fileState;
         closed = false;
     }
 
     @Override
-    public long size()
-    {
+    public long size() {
         return file.length();
     }
 
     @Override
-    public ByteBuffer read(long offset, int length) throws IOException
-    {
+    public ByteBuffer read(long offset, int length) throws IOException {
         if (closed) {
             throw new ClosedChannelException();
         }
@@ -58,8 +53,7 @@ class MemRandomInputFile implements RandomInputFile
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         closed = true;
     }
 }

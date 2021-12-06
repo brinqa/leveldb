@@ -17,30 +17,26 @@
  */
 package org.iq80.leveldb.memenv;
 
-import com.google.common.base.Preconditions;
-import org.iq80.leveldb.env.File;
-
-import java.util.List;
-import java.util.Objects;
-
 import static org.iq80.leveldb.memenv.MemFs.SEPARATOR;
 import static org.iq80.leveldb.memenv.MemFs.SEPARATOR_CHAR;
 
-class MemFile implements File
-{
+import com.google.common.base.Preconditions;
+import java.util.List;
+import java.util.Objects;
+import org.iq80.leveldb.env.File;
+
+class MemFile implements File {
     private final MemFs fs;
     private final String filename;
 
-    private MemFile(MemFs fs, String filename)
-    {
+    private MemFile(MemFs fs, String filename) {
         Preconditions.checkArgument(fs != null, "fs null");
         Preconditions.checkArgument(filename != null && !filename.isEmpty(), "empty file name");
         this.fs = fs;
         this.filename = filename;
     }
 
-    static MemFile createMemFile(MemFs fs, String filename)
-    {
+    static MemFile createMemFile(MemFs fs, String filename) {
         Objects.requireNonNull(filename, "filename");
         String path = filename;
         if (!path.startsWith(MemFs.SEPARATOR)) {
@@ -53,95 +49,83 @@ class MemFile implements File
     }
 
     @Override
-    public MemFile child(String other)
-    {
-        Preconditions.checkArgument(other == null || other.isEmpty() || !other.contains(SEPARATOR), "Invalid file/directory name %s", other);
+    public MemFile child(String other) {
+        Preconditions.checkArgument(
+                other == null || other.isEmpty() || !other.contains(SEPARATOR),
+                "Invalid file/directory name %s",
+                other);
         return createMemFile(fs, filename + SEPARATOR_CHAR + other);
     }
 
     @Override
-    public boolean mkdirs()
-    {
+    public boolean mkdirs() {
         return fs.mkdirs(this);
     }
 
     @Override
-    public String getName()
-    {
+    public String getName() {
         int i = filename.lastIndexOf(SEPARATOR_CHAR);
         return i >= 0 ? filename.substring(i + 1) : filename;
     }
 
     @Override
-    public MemFile getParentFile()
-    {
+    public MemFile getParentFile() {
         int i = filename.lastIndexOf(SEPARATOR);
         return createMemFile(fs, i > 0 ? filename.substring(0, i) : SEPARATOR);
     }
 
     @Override
-    public String getPath()
-    {
+    public String getPath() {
         return filename;
     }
 
     @Override
-    public boolean canRead()
-    {
+    public boolean canRead() {
         return fs.canRead(this);
     }
 
     @Override
-    public boolean exists()
-    {
+    public boolean exists() {
         return fs.exists(this);
     }
 
     @Override
-    public boolean isDirectory()
-    {
+    public boolean isDirectory() {
         return fs.isDirectory(this);
     }
 
     @Override
-    public boolean isFile()
-    {
+    public boolean isFile() {
         return fs.isFile(this);
     }
 
     @Override
-    public long length()
-    {
+    public long length() {
         return fs.getFileState(this).map(FileState::length).orElse(0L);
     }
 
     @Override
-    public boolean delete()
-    {
+    public boolean delete() {
         return fs.delete(this);
     }
 
     @Override
-    public List<File> listFiles()
-    {
+    public List<File> listFiles() {
         return fs.listFiles(this);
     }
 
     @Override
-    public boolean renameTo(File dest)
-    {
+    public boolean renameTo(File dest) {
         return fs.renameTo(this, ((MemFile) dest));
     }
 
     @Override
-    public boolean deleteRecursively()
-    {
+    public boolean deleteRecursively() {
         return fs.deleteRecursively(this);
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -153,14 +137,12 @@ class MemFile implements File
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(filename);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return filename;
     }
 }

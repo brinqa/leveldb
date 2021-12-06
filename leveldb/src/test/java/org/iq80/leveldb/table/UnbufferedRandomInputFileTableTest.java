@@ -21,13 +21,10 @@ import org.iq80.leveldb.env.Env;
 import org.iq80.leveldb.fileenv.EnvImpl;
 import org.iq80.leveldb.fileenv.MmapLimiter;
 
-public class UnbufferedRandomInputFileTableTest
-        extends TableTest
-{
+public class UnbufferedRandomInputFileTableTest extends TableTest {
     @Override
-    protected Env getEnv()
-    {
-        //disable memory mapped files
+    protected Env getEnv() {
+        // disable memory mapped files
         return EnvImpl.createEnv(MmapLimiter.newLimiter(0));
     }
 }

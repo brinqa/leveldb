@@ -17,6 +17,12 @@
  */
 package org.iq80.leveldb.impl;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+import static org.iq80.leveldb.impl.DbConstants.NUM_LEVELS;
+import static org.iq80.leveldb.impl.LogMonitors.throwExceptionMonitor;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
@@ -25,18 +31,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.env.Env;
-import org.iq80.leveldb.env.File;
-import org.iq80.leveldb.iterator.InternalIterator;
-import org.iq80.leveldb.iterator.MergingIterator;
-import org.iq80.leveldb.table.UserComparator;
-import org.iq80.leveldb.util.SafeListBuilder;
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.Slice;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,15 +46,19 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import org.iq80.leveldb.DBException;
+import org.iq80.leveldb.Options;
+import org.iq80.leveldb.ReadOptions;
+import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.iterator.InternalIterator;
+import org.iq80.leveldb.iterator.MergingIterator;
+import org.iq80.leveldb.table.UserComparator;
+import org.iq80.leveldb.util.SafeListBuilder;
+import org.iq80.leveldb.util.Slice;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-import static org.iq80.leveldb.impl.DbConstants.NUM_LEVELS;
-import static org.iq80.leveldb.impl.LogMonitors.throwExceptionMonitor;
-
-public class VersionSet
-{
+public class VersionSet {
     private static final int L0_COMPACTION_TRIGGER = 4;
 
     private final AtomicLong nextFileNumber = new AtomicLong(2);
@@ -80,9 +78,13 @@ public class VersionSet
     private LogWriter descriptorLog;
     private final Map<Integer, InternalKey> compactPointers = new TreeMap<>();
 
-    public VersionSet(Options options, File databaseDir, TableCache tableCache, InternalKeyComparator internalKeyComparator, Env env)
-            throws IOException
-    {
+    public VersionSet(
+            Options options,
+            File databaseDir,
+            TableCache tableCache,
+            InternalKeyComparator internalKeyComparator,
+            Env env)
+            throws IOException {
         this.options = options;
         this.databaseDir = databaseDir;
         this.tableCache = tableCache;
@@ -93,9 +95,7 @@ public class VersionSet
         initializeIfNeeded();
     }
 
-    private void initializeIfNeeded()
-            throws IOException
-    {
+    private void initializeIfNeeded() throws IOException {
         File currentFile = databaseDir.child(Filename.currentFileName());
 
         if (!currentFile.exists()) {
@@ -105,12 +105,15 @@ public class VersionSet
             edit.setNextFileNumber(nextFileNumber.get());
             edit.setLastSequenceNumber(lastSequence);
 
-            LogWriter log = Logs.createLogWriter(databaseDir.child(Filename.descriptorFileName(manifestFileNumber)), manifestFileNumber, env);
+            LogWriter log =
+                    Logs.createLogWriter(
+                            databaseDir.child(Filename.descriptorFileName(manifestFileNumber)),
+                            manifestFileNumber,
+                            env);
             try {
                 writeSnapshot(log);
                 log.addRecord(edit.encode(), false);
-            }
-            finally {
+            } finally {
                 log.close();
             }
 
@@ -118,9 +121,7 @@ public class VersionSet
         }
     }
 
-    public void release()
-            throws IOException
-    {
+    public void release() throws IOException {
         if (descriptorLog != null) {
             descriptorLog.close();
             descriptorLog = null;
@@ -134,67 +135,60 @@ public class VersionSet
 
         Set<Version> versions = activeVersions.keySet();
         if (versions.size() > 0) {
-            options.logger().log("DB closed with %s open snapshots. This could mean your application has a resource leak.", versions.size());
+            options.logger()
+                    .log(
+                            "DB closed with %s open snapshots. This could mean your application has a resource leak.",
+                            versions.size());
         }
     }
 
-    private void appendVersion(Version version)
-    {
+    private void appendVersion(Version version) {
         requireNonNull(version, "version is null");
         checkArgument(version != current, "version is the current version");
         Version previous = current;
-        current = version; //version already retained, create with retained = 1
+        current = version; // version already retained, create with retained = 1
         activeVersions.put(version, new Object());
         if (previous != null) {
             previous.release();
         }
     }
 
-    public void removeVersion(Version version)
-    {
+    public void removeVersion(Version version) {
         requireNonNull(version, "version is null");
         checkArgument(version != current, "version is the current version");
         boolean removed = activeVersions.remove(version) != null;
         assert removed : "Expected the version to still be in the active set";
     }
 
-    public InternalKeyComparator getInternalKeyComparator()
-    {
+    public InternalKeyComparator getInternalKeyComparator() {
         return internalKeyComparator;
     }
 
-    public TableCache getTableCache()
-    {
+    public TableCache getTableCache() {
         return tableCache;
     }
 
-    public Version getCurrent()
-    {
+    public Version getCurrent() {
         return current;
     }
 
-    public long getManifestFileNumber()
-    {
+    public long getManifestFileNumber() {
         return manifestFileNumber;
     }
 
-    public long getNextFileNumber()
-    {
+    public long getNextFileNumber() {
         return nextFileNumber.getAndIncrement();
     }
 
-    public long getLogNumber()
-    {
+    public long getLogNumber() {
         return logNumber;
     }
 
-    public long getPrevLogNumber()
-    {
+    public long getPrevLogNumber() {
         return prevLogNumber;
     }
 
-    public MergingIterator makeInputIterator(Compaction c) throws IOException
-    {
+    public MergingIterator makeInputIterator(Compaction c) throws IOException {
         ReadOptions rOptions = new ReadOptions();
         rOptions.verifyChecksums(this.options.paranoidChecks());
         rOptions.fillCache(false);
@@ -207,16 +201,18 @@ public class VersionSet
                 List<FileMetaData> files = c.input(which);
                 if (!files.isEmpty()) {
                     if (c.getLevel() + which == 0) {
-                        try (SafeListBuilder<InternalIterator> builder = SafeListBuilder.builder()) {
+                        try (SafeListBuilder<InternalIterator> builder =
+                                SafeListBuilder.builder()) {
                             for (FileMetaData file : files) {
                                 builder.add(tableCache.newIterator(file, rOptions));
                             }
                             list.add(new MergingIterator(builder.build(), internalKeyComparator));
                         }
-                    }
-                    else {
+                    } else {
                         // Create concatenating iterator for the files from this level
-                        list.add(Level.createLevelConcatIterator(tableCache, files, internalKeyComparator, rOptions));
+                        list.add(
+                                Level.createLevelConcatIterator(
+                                        tableCache, files, internalKeyComparator, rOptions));
                     }
                 }
             }
@@ -224,40 +220,34 @@ public class VersionSet
         }
     }
 
-    public boolean overlapInLevel(int level, Slice smallestUserKey, Slice largestUserKey)
-    {
+    public boolean overlapInLevel(int level, Slice smallestUserKey, Slice largestUserKey) {
         return current.overlapInLevel(level, smallestUserKey, largestUserKey);
     }
 
-    public int numberOfFilesInLevel(int level)
-    {
+    public int numberOfFilesInLevel(int level) {
         return current.numberOfFilesInLevel(level);
     }
 
-    public long numberOfBytesInLevel(int level)
-    {
+    public long numberOfBytesInLevel(int level) {
         return current.numberOfFilesInLevel(level);
     }
 
-    public long getLastSequence()
-    {
+    public long getLastSequence() {
         return lastSequence;
     }
 
-    public void setLastSequence(long newLastSequence)
-    {
-        checkArgument(newLastSequence >= lastSequence, "Expected newLastSequence to be greater than or equal to current lastSequence");
+    public void setLastSequence(long newLastSequence) {
+        checkArgument(
+                newLastSequence >= lastSequence,
+                "Expected newLastSequence to be greater than or equal to current lastSequence");
         this.lastSequence = newLastSequence;
     }
 
-    public void logAndApply(VersionEdit edit, ReentrantLock mutex)
-            throws IOException
-    {
+    public void logAndApply(VersionEdit edit, ReentrantLock mutex) throws IOException {
         if (edit.getLogNumber() != null) {
             checkArgument(edit.getLogNumber() >= logNumber);
             checkArgument(edit.getLogNumber() < nextFileNumber.get());
-        }
-        else {
+        } else {
             edit.setLogNumber(logNumber);
         }
 
@@ -285,7 +275,11 @@ public class VersionSet
                 // No reason to unlock mutex here since we only hit this path in the
                 // first call to logAndApply (when opening the database).
                 edit.setNextFileNumber(nextFileNumber.get());
-                descriptorLog = Logs.createLogWriter(databaseDir.child(Filename.descriptorFileName(mFileNumber)), mFileNumber, env);
+                descriptorLog =
+                        Logs.createLogWriter(
+                                databaseDir.child(Filename.descriptorFileName(mFileNumber)),
+                                mFileNumber,
+                                env);
                 writeSnapshot(descriptorLog);
                 createdNewManifest = true;
             }
@@ -301,12 +295,10 @@ public class VersionSet
                 if (createdNewManifest) {
                     Filename.setCurrentFile(databaseDir, mFileNumber, env);
                 }
-            }
-            finally {
+            } finally {
                 mutex.lock();
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             options.logger().log("MANIFEST write: %s", e);
             // New manifest file was not installed, so clean up state and delete the file
             if (createdNewManifest) {
@@ -324,9 +316,7 @@ public class VersionSet
         prevLogNumber = edit.getPreviousLogNumber();
     }
 
-    private void writeSnapshot(LogWriter log)
-            throws IOException
-    {
+    private void writeSnapshot(LogWriter log) throws IOException {
         // Save metadata
         VersionEdit edit = new VersionEdit();
         edit.setComparatorName(internalKeyComparator.name());
@@ -341,12 +331,8 @@ public class VersionSet
         log.addRecord(record, false);
     }
 
-    /**
-     * @return {@code true} if manifest should be saved, {@code false} otherwise
-     */
-    public boolean recover()
-            throws IOException
-    {
+    /** @return {@code true} if manifest should be saved, {@code false} otherwise */
+    public boolean recover() throws IOException {
         // Read "CURRENT" file, which contains a pointer to the current manifest file
         final String descriptorName = Filename.getCurrentFile(databaseDir, env);
 
@@ -368,8 +354,11 @@ public class VersionSet
                 // verify comparator
                 String editComparator = edit.getComparatorName();
                 String userComparator = internalKeyComparator.name();
-                checkArgument(editComparator == null || editComparator.equals(userComparator),
-                        "Expected user comparator %s to match existing database comparator ", userComparator, editComparator);
+                checkArgument(
+                        editComparator == null || editComparator.equals(userComparator),
+                        "Expected user comparator %s to match existing database comparator ",
+                        userComparator,
+                        editComparator);
 
                 // apply edit
                 builder.apply(edit);
@@ -417,15 +406,13 @@ public class VersionSet
             if (reuseManifest(descriptorFile)) {
                 // No need to save manifest
                 return false;
-            }
-            else {
+            } else {
                 return true;
             }
         }
     }
 
-    void markFileNumberUsed(long number)
-    {
+    void markFileNumberUsed(long number) {
         long current;
         while ((current = nextFileNumber.get()) <= number) {
             if (nextFileNumber.compareAndSet(current, number + 1)) {
@@ -434,23 +421,24 @@ public class VersionSet
         }
     }
 
-    private boolean reuseManifest(File currentFile)
-    {
+    private boolean reuseManifest(File currentFile) {
         if (!options.reuseLogs()) {
             return false;
         }
         Filename.FileInfo fileInfo = Filename.parseFileName(currentFile);
-        if (fileInfo == null ||
-                fileInfo.getFileType() != Filename.FileType.DESCRIPTOR ||
+        if (fileInfo == null
+                || fileInfo.getFileType() != Filename.FileType.DESCRIPTOR
+                ||
                 // Make new compacted MANIFEST if old one is too big
                 currentFile.length() >= targetFileSize()) {
             return false;
         }
         Preconditions.checkState(descriptorLog == null, "descriptor log should be null");
         try {
-            descriptorLog = LogWriter.createWriter(fileInfo.getFileNumber(), env.newAppendableFile(currentFile));
-        }
-        catch (Exception e) {
+            descriptorLog =
+                    LogWriter.createWriter(
+                            fileInfo.getFileNumber(), env.newAppendableFile(currentFile));
+        } catch (Exception e) {
             assert descriptorLog == null;
             options.logger().log("Reuse MANIFEST: %s", e);
             return false;
@@ -461,8 +449,7 @@ public class VersionSet
         return true;
     }
 
-    private void finalizeVersion(Version version)
-    {
+    private void finalizeVersion(Version version) {
         // Precomputed best level for next compaction
         int bestLevel = -1;
         double bestScore = -1;
@@ -482,8 +469,7 @@ public class VersionSet
                 // setting, or very high compression ratios, or lots of
                 // overwrites/deletions).
                 score = 1.0 * version.numberOfFilesInLevel(level) / L0_COMPACTION_TRIGGER;
-            }
-            else {
+            } else {
                 // Compute the ratio of current size to size limit.
                 long levelBytes = 0;
                 for (FileMetaData fileMetaData : version.getFiles(level)) {
@@ -502,8 +488,7 @@ public class VersionSet
         version.setCompactionScore(bestScore);
     }
 
-    private static <V> V coalesce(V... values)
-    {
+    private static <V> V coalesce(V... values) {
         for (V value : values) {
             if (value != null) {
                 return value;
@@ -512,8 +497,7 @@ public class VersionSet
         return null;
     }
 
-    public List<FileMetaData> getLiveFiles()
-    {
+    public List<FileMetaData> getLiveFiles() {
         ImmutableList.Builder<FileMetaData> builder = ImmutableList.builder();
         for (Version activeVersion : activeVersions.keySet()) {
             builder.addAll(activeVersion.getFiles().values());
@@ -521,32 +505,27 @@ public class VersionSet
         return builder.build();
     }
 
-    public long targetFileSize()
-    {
+    public long targetFileSize() {
         return options.maxFileSize();
     }
 
     /**
-     * Maximum bytes of overlaps in grandparent (i.e., level+2) before we
-     * stop building a single file in a level->level+1 compaction.
+     * Maximum bytes of overlaps in grandparent (i.e., level+2) before we stop building a single
+     * file in a level->level+1 compaction.
      */
-    public long maxGrandParentOverlapBytes()
-    {
+    public long maxGrandParentOverlapBytes() {
         return 10L * targetFileSize();
     }
 
     /**
-     * Maximum number of bytes in all compacted files.  We avoid expanding
-     * the lower level file set of a compaction if it would make the
-     * total compaction cover more than this many bytes.
+     * Maximum number of bytes in all compacted files. We avoid expanding the lower level file set
+     * of a compaction if it would make the total compaction cover more than this many bytes.
      */
-    public long expandedCompactionByteSizeLimit()
-    {
+    public long expandedCompactionByteSizeLimit() {
         return 25L * targetFileSize();
     }
 
-    private double maxBytesForLevel(int level)
-    {
+    private double maxBytesForLevel(int level) {
         // Note: the result for level zero is not really used since we set
         // the level-0 compaction threshold based on number of files.
 
@@ -559,13 +538,11 @@ public class VersionSet
         return result;
     }
 
-    public long maxFileSizeForLevel()
-    {
+    public long maxFileSizeForLevel() {
         return targetFileSize();
     }
 
-    public long totalFileSize(List<FileMetaData> files)
-    {
+    public long totalFileSize(List<FileMetaData> files) {
         long sum = 0;
         for (FileMetaData file : files) {
             sum += file.getFileSize();
@@ -573,13 +550,11 @@ public class VersionSet
         return sum;
     }
 
-    public boolean needsCompaction()
-    {
+    public boolean needsCompaction() {
         return current.getCompactionScore() >= 1 || current.getFileToCompact() != null;
     }
 
-    public Compaction compactRange(int level, InternalKey begin, InternalKey end)
-    {
+    public Compaction compactRange(int level, InternalKey begin, InternalKey end) {
         List<FileMetaData> levelInputs = getOverlappingInputs(level, begin, end);
         if (levelInputs.isEmpty()) {
             return null;
@@ -588,8 +563,7 @@ public class VersionSet
         return setupOtherInputs(level, levelInputs);
     }
 
-    public Compaction pickCompaction()
-    {
+    public Compaction pickCompaction() {
         // We prefer compactions triggered by too much data in a level over
         // the compactions triggered by seeks.
         boolean sizeCompaction = (current.getCompactionScore() >= 1);
@@ -605,8 +579,10 @@ public class VersionSet
             // Pick the first file that comes after compact_pointer_[level]
             levelInputs = new ArrayList<>();
             for (FileMetaData fileMetaData : current.getFiles(level)) {
-                if (!compactPointers.containsKey(level) ||
-                        internalKeyComparator.compare(fileMetaData.getLargest(), compactPointers.get(level)) > 0) {
+                if (!compactPointers.containsKey(level)
+                        || internalKeyComparator.compare(
+                                        fileMetaData.getLargest(), compactPointers.get(level))
+                                > 0) {
                     levelInputs.add(fileMetaData);
                     break;
                 }
@@ -615,12 +591,10 @@ public class VersionSet
                 // Wrap-around to the beginning of the key space
                 levelInputs.add(current.getFiles(level).get(0));
             }
-        }
-        else if (seekCompaction) {
+        } else if (seekCompaction) {
             level = current.getFileToCompactLevel();
             levelInputs = Lists.newArrayList(current.getFileToCompact());
-        }
-        else {
+        } else {
             return null;
         }
 
@@ -643,8 +617,8 @@ public class VersionSet
      *
      * @return {@link InternalKey} if {@code files} is no empty, {@code null} otherwise
      */
-    private static InternalKey findLargestKey(InternalKeyComparator internalKeyComparator, List<FileMetaData> files)
-    {
+    private static InternalKey findLargestKey(
+            InternalKeyComparator internalKeyComparator, List<FileMetaData> files) {
         if (files.isEmpty()) {
             return null;
         }
@@ -660,16 +634,20 @@ public class VersionSet
     /**
      * find minimum file b2=(l2, u2) in level file for which l2 > u1 and userKey(l2) = userKey(u1)
      */
-    private static FileMetaData findSmallestBoundaryFile(InternalKeyComparator internalKeyComparator, List<FileMetaData> levelFiles,
-                                                         InternalKey largestKey)
-    {
+    private static FileMetaData findSmallestBoundaryFile(
+            InternalKeyComparator internalKeyComparator,
+            List<FileMetaData> levelFiles,
+            InternalKey largestKey) {
         UserComparator userComparator = internalKeyComparator.getUserComparator();
         FileMetaData smallestBoundaryFile = null;
         for (FileMetaData f : levelFiles) {
-            if (internalKeyComparator.compare(f.getSmallest(), largestKey) > 0 &&
-                    userComparator.compare(f.getSmallest().getUserKey(), largestKey.getUserKey()) == 0) {
-                if (smallestBoundaryFile == null ||
-                        internalKeyComparator.compare(f.getSmallest(), smallestBoundaryFile.getSmallest()) < 0) {
+            if (internalKeyComparator.compare(f.getSmallest(), largestKey) > 0
+                    && userComparator.compare(f.getSmallest().getUserKey(), largestKey.getUserKey())
+                            == 0) {
+                if (smallestBoundaryFile == null
+                        || internalKeyComparator.compare(
+                                        f.getSmallest(), smallestBoundaryFile.getSmallest())
+                                < 0) {
                     smallestBoundaryFile = f;
                 }
             }
@@ -678,24 +656,24 @@ public class VersionSet
     }
 
     /**
-     * Extracts the largest file b1 from {@code compactionFiles} and then searches for a
-     * b2 in {@code levelFiles} for which userKey(u1) = userKey(l2). If it finds such a
-     * file b2 (known as a boundary file), adds it to {@code compactionFiles} and then
-     * searches again using this new upper bound.
-     * <p>
-     * If there are two blocks, b1=(l1, u1) and b2=(l2, u2) and
-     * userKey(u1) = userKey(l2), and if we compact b1 but not b2 then a
-     * subsequent get operation will yield an incorrect result because it will
-     * return the record from b2 in level i rather than from b1 because it searches
+     * Extracts the largest file b1 from {@code compactionFiles} and then searches for a b2 in
+     * {@code levelFiles} for which userKey(u1) = userKey(l2). If it finds such a file b2 (known as
+     * a boundary file), adds it to {@code compactionFiles} and then searches again using this new
+     * upper bound.
+     *
+     * <p>If there are two blocks, b1=(l1, u1) and b2=(l2, u2) and userKey(u1) = userKey(l2), and if
+     * we compact b1 but not b2 then a subsequent get operation will yield an incorrect result
+     * because it will return the record from b2 in level i rather than from b1 because it searches
      * level by level for records matching the supplied user key.
      *
      * @param internalKeyComparator internal key comparator
-     * @param levelFiles            List of files to search for boundary files.
-     * @param compactionFiles       in/out List of files to extend by adding boundary files.
+     * @param levelFiles List of files to search for boundary files.
+     * @param compactionFiles in/out List of files to extend by adding boundary files.
      */
-    static void addBoundaryInputs(InternalKeyComparator internalKeyComparator, List<FileMetaData> levelFiles,
-                                  List<FileMetaData> compactionFiles)
-    {
+    static void addBoundaryInputs(
+            InternalKeyComparator internalKeyComparator,
+            List<FileMetaData> levelFiles,
+            List<FileMetaData> compactionFiles) {
         InternalKey largestKey = findLargestKey(internalKeyComparator, compactionFiles);
         if (largestKey == null) {
             return;
@@ -709,15 +687,13 @@ public class VersionSet
             if (smallestBoundaryFile != null) {
                 compactionFiles.add(smallestBoundaryFile);
                 largestKey = smallestBoundaryFile.getLargest();
-            }
-            else {
+            } else {
                 break;
             }
         }
     }
 
-    private Compaction setupOtherInputs(int level, List<FileMetaData> levelInputs)
-    {
+    private Compaction setupOtherInputs(int level, List<FileMetaData> levelInputs) {
         addBoundaryInputs(internalKeyComparator, current.getFiles(level), levelInputs);
         Entry<InternalKey, InternalKey> range = getRange(levelInputs);
         InternalKey smallest = range.getKey();
@@ -747,15 +723,18 @@ public class VersionSet
 
                 List<FileMetaData> expanded1 = getOverlappingInputs(level + 1, newStart, newLimit);
                 if (expanded1.size() == levelUpInputs.size()) {
-                    options.logger().log(
-                            "Expanding@%s %s+%s (%s+%s bytes) to %s+%s (%s+%s bytes)",
-                            level,
-                            levelInputs.size(),
-                            levelUpInputs.size(),
-                            levelInputSize, levelUpInputSize,
-                            expanded0.size(),
-                            expanded1.size(),
-                            expanded0Size, levelUpInputSize);
+                    options.logger()
+                            .log(
+                                    "Expanding@%s %s+%s (%s+%s bytes) to %s+%s (%s+%s bytes)",
+                                    level,
+                                    levelInputs.size(),
+                                    levelUpInputs.size(),
+                                    levelInputSize,
+                                    levelUpInputSize,
+                                    expanded0.size(),
+                                    expanded1.size(),
+                                    expanded0Size,
+                                    levelUpInputSize);
                     largest = newLimit;
                     levelInputs = expanded0;
                     levelUpInputs = expanded1;
@@ -772,12 +751,18 @@ public class VersionSet
         final List<FileMetaData> grandparents;
         if (level + 2 < NUM_LEVELS) {
             grandparents = getOverlappingInputs(level + 2, allStart, allLimit);
-        }
-        else {
+        } else {
             grandparents = Collections.emptyList();
         }
 
-        Compaction compaction = new Compaction(current, level, maxFileSizeForLevel(), levelInputs, levelUpInputs, grandparents);
+        Compaction compaction =
+                new Compaction(
+                        current,
+                        level,
+                        maxFileSizeForLevel(),
+                        levelInputs,
+                        levelUpInputs,
+                        grandparents);
 
         // Update the place where we will do the next compaction for this level.
         // We update this immediately instead of waiting for the VersionEdit
@@ -789,9 +774,9 @@ public class VersionSet
         return compaction;
     }
 
-    List<FileMetaData> getOverlappingInputs(int level, InternalKey begin, InternalKey end)
-    {
-        Preconditions.checkArgument(level >= 0 && level <= DbConstants.NUM_LEVELS, "Invalid level value %s", level);
+    List<FileMetaData> getOverlappingInputs(int level, InternalKey begin, InternalKey end) {
+        Preconditions.checkArgument(
+                level >= 0 && level <= DbConstants.NUM_LEVELS, "Invalid level value %s", level);
         List<FileMetaData> inputs = new ArrayList<>();
         Slice userBegin = begin == null ? null : begin.getUserKey();
         Slice userEnd = end == null ? null : end.getUserKey();
@@ -803,11 +788,9 @@ public class VersionSet
             Slice fileLimit = fileMetaData.getLargest().getUserKey();
             if (begin != null && userComparator.compare(fileLimit, userBegin) < 0) {
                 // "files1" is completely before specified range; skip it
-            }
-            else if (end != null && userComparator.compare(fileStart, userEnd) > 0) {
+            } else if (end != null && userComparator.compare(fileStart, userEnd) > 0) {
                 // "files1" is completely after specified range; skip it
-            }
-            else {
+            } else {
                 inputs.add(fileMetaData);
                 if (level == 0) {
                     // Level-0 files may overlap each other.  So check if the newly
@@ -816,8 +799,7 @@ public class VersionSet
                         userBegin = fileStart;
                         inputs.clear();
                         i = -1;
-                    }
-                    else if (end != null && userComparator.compare(fileLimit, userEnd) > 0) {
+                    } else if (end != null && userComparator.compare(fileLimit, userEnd) > 0) {
                         userEnd = fileLimit;
                         inputs.clear();
                         i = -1;
@@ -828,8 +810,7 @@ public class VersionSet
         return inputs;
     }
 
-    private Entry<InternalKey, InternalKey> getRange(List<FileMetaData>... inputLists)
-    {
+    private Entry<InternalKey, InternalKey> getRange(List<FileMetaData>... inputLists) {
         InternalKey smallest = null;
         InternalKey largest = null;
         for (List<FileMetaData> inputList : inputLists) {
@@ -837,8 +818,7 @@ public class VersionSet
                 if (smallest == null) {
                     smallest = fileMetaData.getSmallest();
                     largest = fileMetaData.getLargest();
-                }
-                else {
+                } else {
                     if (internalKeyComparator.compare(fileMetaData.getSmallest(), smallest) < 0) {
                         smallest = fileMetaData.getSmallest();
                     }
@@ -851,12 +831,13 @@ public class VersionSet
         return Maps.immutableEntry(smallest, largest);
     }
 
-    public long getMaxNextLevelOverlappingBytes()
-    {
+    public long getMaxNextLevelOverlappingBytes() {
         long result = 0;
         for (int level = 1; level < NUM_LEVELS - 1; level++) {
             for (FileMetaData fileMetaData : current.getFiles(level)) {
-                List<FileMetaData> overlaps = getOverlappingInputs(level + 1, fileMetaData.getSmallest(), fileMetaData.getLargest());
+                List<FileMetaData> overlaps =
+                        getOverlappingInputs(
+                                level + 1, fileMetaData.getSmallest(), fileMetaData.getLargest());
                 long totalSize = 0;
                 for (FileMetaData overlap : overlaps) {
                     totalSize += overlap.getFileSize();
@@ -867,8 +848,7 @@ public class VersionSet
         return result;
     }
 
-    public CharSequence levelSummary()
-    {
+    public CharSequence levelSummary() {
         StringBuilder sb = new StringBuilder();
         sb.append("files[ ");
         for (int level = 0; level < NUM_LEVELS; level++) {
@@ -880,19 +860,15 @@ public class VersionSet
     }
 
     /**
-     * A helper class so we can efficiently apply a whole sequence
-     * of edits to a particular state without creating intermediate
-     * Versions that contain full copies of the intermediate state.
+     * A helper class so we can efficiently apply a whole sequence of edits to a particular state
+     * without creating intermediate Versions that contain full copies of the intermediate state.
      */
-    private static class Builder
-            implements AutoCloseable
-    {
+    private static class Builder implements AutoCloseable {
         private final VersionSet versionSet;
         private final Version baseVersion;
         private final List<LevelState> levels;
 
-        private Builder(VersionSet versionSet, Version baseVersion)
-        {
+        private Builder(VersionSet versionSet, Version baseVersion) {
             this.versionSet = versionSet;
             this.baseVersion = baseVersion;
             baseVersion.retain();
@@ -903,11 +879,8 @@ public class VersionSet
             }
         }
 
-        /**
-         * Apply the specified edit to the current state.
-         */
-        public void apply(VersionEdit edit)
-        {
+        /** Apply the specified edit to the current state. */
+        public void apply(VersionEdit edit) {
             // Update compaction pointers
             for (Entry<Integer, InternalKey> entry : edit.getCompactPointers().entrySet()) {
                 Integer level = entry.getKey();
@@ -951,13 +924,10 @@ public class VersionSet
             }
         }
 
-        /**
-         * Saves the current state in specified version.
-         */
-        public void saveTo(Version version)
-                throws IOException
-        {
-            FileMetaDataBySmallestKey cmp = new FileMetaDataBySmallestKey(versionSet.internalKeyComparator);
+        /** Saves the current state in specified version. */
+        public void saveTo(Version version) throws IOException {
+            FileMetaDataBySmallestKey cmp =
+                    new FileMetaDataBySmallestKey(versionSet.internalKeyComparator);
             for (int level = 0; level < baseVersion.numberOfLevels(); level++) {
                 // Merge the set of added files with the set of pre-existing files.
                 // Drop any deleted files.  Store the result in *v.
@@ -972,7 +942,8 @@ public class VersionSet
                 }
 
                 // files must be added in sorted order so assertion check in maybeAddFile works
-                ArrayList<FileMetaData> sortedFiles = new ArrayList<>(baseFiles.size() + addedFiles.size());
+                ArrayList<FileMetaData> sortedFiles =
+                        new ArrayList<>(baseFiles.size() + addedFiles.size());
                 sortedFiles.addAll(baseFiles);
                 sortedFiles.addAll(addedFiles);
                 Collections.sort(sortedFiles, cmp);
@@ -981,31 +952,38 @@ public class VersionSet
                     maybeAddFile(version, level, fileMetaData);
                 }
 
-                //#ifndef NDEBUG  todo
+                // #ifndef NDEBUG  todo
                 // Make sure there is no overlap in levels > 0
                 version.assertNoOverlappingFiles(level);
-                //#endif
+                // #endif
             }
         }
 
         private void maybeAddFile(Version version, int level, FileMetaData fileMetaData)
-                throws IOException
-        {
+                throws IOException {
             if (levels.get(level).deletedFiles.contains(fileMetaData.getNumber())) {
                 // File is deleted: do nothing
-            }
-            else {
+            } else {
                 List<FileMetaData> files = version.getFiles(level);
                 if (level > 0 && !files.isEmpty()) {
                     // Must not overlap
-                    boolean filesOverlap = versionSet.internalKeyComparator.compare(files.get(files.size() - 1).getLargest(), fileMetaData.getSmallest()) >= 0;
+                    boolean filesOverlap =
+                            versionSet.internalKeyComparator.compare(
+                                            files.get(files.size() - 1).getLargest(),
+                                            fileMetaData.getSmallest())
+                                    >= 0;
                     if (filesOverlap) {
-                        // A memory compaction, while this compaction was running, resulted in a a database state that is
-                        // incompatible with the compaction.  This is rare and expensive to detect while the compaction is
+                        // A memory compaction, while this compaction was running, resulted in a a
+                        // database state that is
+                        // incompatible with the compaction.  This is rare and expensive to detect
+                        // while the compaction is
                         // running, so we catch here simply discard the work.
-                        throw new IOException(String.format("Compaction is obsolete: Overlapping files %s and %s in level %s",
-                                files.get(files.size() - 1).getNumber(),
-                                fileMetaData.getNumber(), level));
+                        throw new IOException(
+                                String.format(
+                                        "Compaction is obsolete: Overlapping files %s and %s in level %s",
+                                        files.get(files.size() - 1).getNumber(),
+                                        fileMetaData.getNumber(),
+                                        level));
                     }
                 }
                 version.addFile(level, fileMetaData);
@@ -1013,45 +991,36 @@ public class VersionSet
         }
 
         @Override
-        public void close()
-        {
+        public void close() {
             baseVersion.release();
         }
 
-        private static class FileMetaDataBySmallestKey
-                implements Comparator<FileMetaData>
-        {
+        private static class FileMetaDataBySmallestKey implements Comparator<FileMetaData> {
             private final InternalKeyComparator internalKeyComparator;
 
-            private FileMetaDataBySmallestKey(InternalKeyComparator internalKeyComparator)
-            {
+            private FileMetaDataBySmallestKey(InternalKeyComparator internalKeyComparator) {
                 this.internalKeyComparator = internalKeyComparator;
             }
 
             @Override
-            public int compare(FileMetaData f1, FileMetaData f2)
-            {
-                return ComparisonChain
-                        .start()
+            public int compare(FileMetaData f1, FileMetaData f2) {
+                return ComparisonChain.start()
                         .compare(f1.getSmallest(), f2.getSmallest(), internalKeyComparator)
                         .compare(f1.getNumber(), f2.getNumber())
                         .result();
             }
         }
 
-        private static class LevelState
-        {
+        private static class LevelState {
             private final SortedSet<FileMetaData> addedFiles;
             private final Set<Long> deletedFiles = new HashSet<>();
 
-            public LevelState(InternalKeyComparator internalKeyComparator)
-            {
+            public LevelState(InternalKeyComparator internalKeyComparator) {
                 addedFiles = new TreeSet<>(new FileMetaDataBySmallestKey(internalKeyComparator));
             }
 
             @Override
-            public String toString()
-            {
+            public String toString() {
                 final StringBuilder sb = new StringBuilder();
                 sb.append("LevelState");
                 sb.append("{addedFiles=").append(addedFiles);

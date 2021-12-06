@@ -19,32 +19,26 @@ package org.iq80.leveldb.table;
 
 import org.iq80.leveldb.util.Slice;
 
-public class BytewiseComparator
-        implements UserComparator
-{
+public class BytewiseComparator implements UserComparator {
     @Override
-    public String name()
-    {
+    public String name() {
         return "leveldb.BytewiseComparator";
     }
 
     @Override
-    public int compare(Slice sliceA, Slice sliceB)
-    {
+    public int compare(Slice sliceA, Slice sliceB) {
         return sliceA.compareTo(sliceB);
     }
 
     @Override
-    public Slice findShortestSeparator(
-            Slice start,
-            Slice limit)
-    {
+    public Slice findShortestSeparator(Slice start, Slice limit) {
         // Find length of common prefix
         int sharedBytes = BlockBuilder.calculateSharedBytes(start, limit);
 
         // Do not shorten if one string is a prefix of the other
         if (sharedBytes < Math.min(start.length(), limit.length())) {
-            // if we can add one to the last shared byte without overflow and the two keys differ by more than
+            // if we can add one to the last shared byte without overflow and the two keys differ by
+            // more than
             // one increment at this location.
             int lastSharedByte = start.getUnsignedByte(sharedBytes);
             if (lastSharedByte < 0xff && lastSharedByte + 1 < limit.getUnsignedByte(sharedBytes)) {
@@ -59,8 +53,7 @@ public class BytewiseComparator
     }
 
     @Override
-    public Slice findShortSuccessor(Slice key)
-    {
+    public Slice findShortSuccessor(Slice key) {
         // Find first character that can be incremented
         for (int i = 0; i < key.length(); i++) {
             int b = key.getUnsignedByte(i);

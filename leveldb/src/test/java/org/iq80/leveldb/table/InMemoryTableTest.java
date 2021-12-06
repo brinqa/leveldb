@@ -20,12 +20,9 @@ package org.iq80.leveldb.table;
 import org.iq80.leveldb.env.Env;
 import org.iq80.leveldb.memenv.MemEnv;
 
-public class InMemoryTableTest
-    extends TableTest
-{
+public class InMemoryTableTest extends TableTest {
     @Override
-    protected Env getEnv()
-    {
+    protected Env getEnv() {
         return MemEnv.createEnv();
     }
 }

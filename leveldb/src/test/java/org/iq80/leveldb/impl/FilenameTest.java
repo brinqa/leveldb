@@ -17,21 +17,18 @@
  */
 package org.iq80.leveldb.impl;
 
-import com.google.common.collect.Lists;
-import org.iq80.leveldb.fileenv.EnvImpl;
-import org.testng.annotations.Test;
-
-import java.util.List;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
-public class FilenameTest
-{
+import com.google.common.collect.Lists;
+import java.util.List;
+import org.iq80.leveldb.fileenv.EnvImpl;
+import org.testng.annotations.Test;
+
+public class FilenameTest {
     @Test
-    public void testFileNameTest()
-    {
+    public void testFileNameTest() {
         assertFileInfo("100.log", 100L, Filename.FileType.LOG);
         assertFileInfo("0.log", 0L, Filename.FileType.LOG);
         assertFileInfo("0.sst", 0L, Filename.FileType.TABLE);
@@ -47,38 +44,38 @@ public class FilenameTest
     }
 
     @Test
-    public void testShouldNotParse()
-    {
-        List<String> errors = Lists.newArrayList("",
-                "foo",
-                "foo-dx-100.log",
-                ".log",
-                "",
-                "manifest",
-                "CURREN",
-                "CURRENTX",
-                "MANIFES",
-                "MANIFEST",
-                "MANIFEST-",
-                "XMANIFEST-3",
-                "MANIFEST-3x",
-                "LOC",
-                "LOCKx",
-                "LO",
-                "LOGx",
-                "18446744073709551616.log",
-                "184467440737095516150.log",
-                "100",
-                "100.",
-                "100.lop");
+    public void testShouldNotParse() {
+        List<String> errors =
+                Lists.newArrayList(
+                        "",
+                        "foo",
+                        "foo-dx-100.log",
+                        ".log",
+                        "",
+                        "manifest",
+                        "CURREN",
+                        "CURRENTX",
+                        "MANIFES",
+                        "MANIFEST",
+                        "MANIFEST-",
+                        "XMANIFEST-3",
+                        "MANIFEST-3x",
+                        "LOC",
+                        "LOCKx",
+                        "LO",
+                        "LOGx",
+                        "18446744073709551616.log",
+                        "184467440737095516150.log",
+                        "100",
+                        "100.",
+                        "100.lop");
         for (String error : errors) {
             assertNull(Filename.parseFileName(EnvImpl.createEnv().toFile(error)));
         }
     }
 
     @Test
-    public void testGeneratedFileNameAreAsExpected()
-    {
+    public void testGeneratedFileNameAreAsExpected() {
         assertEquals(Filename.tableFileName(-1L), "18446744073709551615.ldb");
 
         assertFileInfo(Filename.currentFileName(), 0, Filename.FileType.CURRENT);
@@ -93,8 +90,7 @@ public class FilenameTest
         assertFileInfo(Filename.sstTableFileName(344), 344, Filename.FileType.TABLE);
     }
 
-    private void assertFileInfo(String file, long expectedNumber, Filename.FileType expectedType)
-    {
+    private void assertFileInfo(String file, long expectedNumber, Filename.FileType expectedType) {
         Filename.FileInfo fileInfo = Filename.parseFileName(EnvImpl.createEnv().toFile(file));
         assertNotNull(fileInfo);
         assertEquals(fileInfo.getFileNumber(), expectedNumber);

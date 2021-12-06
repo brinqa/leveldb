@@ -17,24 +17,21 @@
  */
 package org.iq80.leveldb.table;
 
+import static org.testng.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.iq80.leveldb.util.DynamicSliceOutput;
 import org.iq80.leveldb.util.Hash;
 import org.iq80.leveldb.util.Slice;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.testng.Assert.assertTrue;
-
-/**
- * @author Honore Vasconcelos
- */
-public class FilterBlockReaderTest
-{
+/** @author Honore Vasconcelos */
+public class FilterBlockReaderTest {
     {
-        final FilterBlockBuilder filterBlockBuilder = new FilterBlockBuilder(new BloomFilterPolicy(10));
+        final FilterBlockBuilder filterBlockBuilder =
+                new FilterBlockBuilder(new BloomFilterPolicy(10));
         filterBlockBuilder.startBlock(189);
         for (int i = 0; i < 2000; ++i) {
             filterBlockBuilder.addKey(new Slice(String.format("key%06d", i).getBytes()));
@@ -46,17 +43,14 @@ public class FilterBlockReaderTest
         }
     }
 
-    private static class TestHashFilter implements FilterPolicy
-    {
+    private static class TestHashFilter implements FilterPolicy {
         @Override
-        public String name()
-        {
+        public String name() {
             return "TestHashFilter";
         }
 
         @Override
-        public byte[] createFilter(List<Slice> keys)
-        {
+        public byte[] createFilter(List<Slice> keys) {
             final DynamicSliceOutput out = new DynamicSliceOutput(100);
             for (Slice key : keys) {
                 out.writeInt(Hash.hash(key.getRawArray(), key.getRawOffset(), key.length(), 1));
@@ -65,8 +59,7 @@ public class FilterBlockReaderTest
         }
 
         @Override
-        public boolean keyMayMatch(Slice key, Slice filter)
-        {
+        public boolean keyMayMatch(Slice key, Slice filter) {
             final int hash = Hash.hash(key.getRawArray(), key.getRawOffset(), key.length(), 1);
             for (int i = 0; i + 4 <= filter.length(); i += 4) {
                 if (hash == filter.getInt(i)) {
@@ -78,19 +71,17 @@ public class FilterBlockReaderTest
     }
 
     @Test
-    public void testEmptyBuilder() throws Exception
-    {
+    public void testEmptyBuilder() throws Exception {
         FilterBlockBuilder builder = new FilterBlockBuilder(new TestHashFilter());
         final Slice finish = builder.finish();
-        assertTrue(Arrays.equals(finish.copyBytes(), new byte[]{0, 0, 0, 0, 11}));
+        assertTrue(Arrays.equals(finish.copyBytes(), new byte[] {0, 0, 0, 0, 11}));
         final FilterBlockReader reader = new FilterBlockReader(new TestHashFilter(), finish);
         assertTrue(reader.keyMayMatch(0, new Slice("foo".getBytes())));
         assertTrue(reader.keyMayMatch(100000, new Slice("foo".getBytes())));
     }
 
     @Test
-    public void testSingleChunk() throws IOException
-    {
+    public void testSingleChunk() throws IOException {
         FilterBlockBuilder builder = new FilterBlockBuilder(new TestHashFilter());
         builder.startBlock(100);
         builder.addKey(new Slice("foo".getBytes()));
@@ -112,8 +103,7 @@ public class FilterBlockReaderTest
     }
 
     @Test
-    public void testMultiChunk()
-    {
+    public void testMultiChunk() {
         FilterBlockBuilder builder = new FilterBlockBuilder(new TestHashFilter());
 
         // First filter

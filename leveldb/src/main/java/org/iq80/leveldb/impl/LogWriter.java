@@ -17,16 +17,6 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.SliceInput;
-import org.iq80.leveldb.util.SliceOutput;
-import org.iq80.leveldb.util.Slices;
-import org.iq80.leveldb.env.WritableFile;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -34,61 +24,57 @@ import static org.iq80.leveldb.impl.LogConstants.BLOCK_SIZE;
 import static org.iq80.leveldb.impl.LogConstants.HEADER_SIZE;
 import static org.iq80.leveldb.impl.Logs.getChunkChecksum;
 
-public class LogWriter
-        implements Closeable
-{
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.SliceInput;
+import org.iq80.leveldb.util.SliceOutput;
+import org.iq80.leveldb.util.Slices;
+
+public class LogWriter implements Closeable {
     private static final byte[] SA = new byte[HEADER_SIZE];
     private final WritableFile writableFile;
     private final long fileNumber;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    /**
-     * Current offset in the current block
-     */
+    /** Current offset in the current block */
     private int blockOffset;
 
-    private LogWriter(long fileNumber, WritableFile file)
-    {
+    private LogWriter(long fileNumber, WritableFile file) {
         requireNonNull(file, "file is null");
         checkArgument(fileNumber >= 0, "fileNumber is negative");
         this.fileNumber = fileNumber;
         this.writableFile = file;
     }
 
-    private LogWriter(long fileNumber, WritableFile file, long destinationLength)
-    {
+    private LogWriter(long fileNumber, WritableFile file, long destinationLength) {
         this(fileNumber, file);
         this.blockOffset = (int) (destinationLength % LogConstants.BLOCK_SIZE);
     }
 
-    public static LogWriter createWriter(long fileNumber, WritableFile writableFile)
-    {
+    public static LogWriter createWriter(long fileNumber, WritableFile writableFile) {
         return new LogWriter(fileNumber, writableFile);
     }
 
-    public static LogWriter createWriter(long fileNumber, WritableFile writableFile, long destinationLength)
-    {
+    public static LogWriter createWriter(
+            long fileNumber, WritableFile writableFile, long destinationLength) {
         return new LogWriter(fileNumber, writableFile, destinationLength);
     }
 
     @Override
-    public void close()
-            throws IOException
-    {
+    public void close() throws IOException {
         closed.set(true);
         writableFile.close();
-
     }
 
-    public long getFileNumber()
-    {
+    public long getFileNumber() {
         return fileNumber;
     }
 
     // Writes a stream of chunks such that no chunk is split across a block boundary
-    public void addRecord(Slice record, boolean force)
-            throws IOException
-    {
+    public void addRecord(Slice record, boolean force) throws IOException {
         checkState(!closed.get(), "Log has been closed");
 
         SliceInput sliceInput = record.input();
@@ -125,8 +111,7 @@ public class LogWriter
             if (sliceInput.available() > bytesAvailableInBlock) {
                 end = false;
                 fragmentLength = bytesAvailableInBlock;
-            }
-            else {
+            } else {
                 end = true;
                 fragmentLength = sliceInput.available();
             }
@@ -135,14 +120,11 @@ public class LogWriter
             LogChunkType type;
             if (begin && end) {
                 type = LogChunkType.FULL;
-            }
-            else if (begin) {
+            } else if (begin) {
                 type = LogChunkType.FIRST;
-            }
-            else if (end) {
+            } else if (end) {
                 type = LogChunkType.LAST;
-            }
-            else {
+            } else {
                 type = LogChunkType.MIDDLE;
             }
 
@@ -158,10 +140,9 @@ public class LogWriter
         }
     }
 
-    private void writeChunk(LogChunkType type, Slice slice)
-            throws IOException
-    {
-        checkArgument(slice.length() <= 0xffff, "length %s is larger than two bytes", slice.length());
+    private void writeChunk(LogChunkType type, Slice slice) throws IOException {
+        checkArgument(
+                slice.length() <= 0xffff, "length %s is larger than two bytes", slice.length());
         checkArgument(blockOffset + HEADER_SIZE <= BLOCK_SIZE);
 
         // create header
@@ -174,9 +155,10 @@ public class LogWriter
         blockOffset += HEADER_SIZE + slice.length();
     }
 
-    private static Slice newLogRecordHeader(LogChunkType type, Slice slice, int length)
-    {
-        int crc = getChunkChecksum(type.getPersistentId(), slice.getRawArray(), slice.getRawOffset(), length);
+    private static Slice newLogRecordHeader(LogChunkType type, Slice slice, int length) {
+        int crc =
+                getChunkChecksum(
+                        type.getPersistentId(), slice.getRawArray(), slice.getRawOffset(), length);
 
         // Format the header
         Slice header = Slices.allocate(HEADER_SIZE);
@@ -190,11 +172,7 @@ public class LogWriter
     }
 
     @Override
-    public String toString()
-    {
-        return "LogWriter{" +
-                "writableFile=" + writableFile +
-                ", fileNumber=" + fileNumber +
-                '}';
+    public String toString() {
+        return "LogWriter{" + "writableFile=" + writableFile + ", fileNumber=" + fileNumber + '}';
     }
 }

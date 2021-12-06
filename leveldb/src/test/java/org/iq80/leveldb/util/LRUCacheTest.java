@@ -17,21 +17,16 @@
  */
 package org.iq80.leveldb.util;
 
-import com.google.common.cache.Weigher;
-import org.testng.annotations.Test;
-
-import java.util.concurrent.ExecutionException;
-
 import static org.testng.Assert.assertEquals;
 
-/**
- * @author Honore Vasconcelos
- */
-public class LRUCacheTest
-{
+import com.google.common.cache.Weigher;
+import java.util.concurrent.ExecutionException;
+import org.testng.annotations.Test;
+
+/** @author Honore Vasconcelos */
+public class LRUCacheTest {
     @Test
-    public void testMultipleClientWithSameKey() throws Exception
-    {
+    public void testMultipleClientWithSameKey() throws Exception {
         final ILRUCache<Long, Integer> cache = LRUCache.createCache(2 * 5, new CountWeigher());
         final CacheWithStatistics[] caches = CacheWithStatistics.withStatistics(cache, 2);
 
@@ -41,7 +36,8 @@ public class LRUCacheTest
                     assertEquals(((int) caches[i].load(j)), j * (i + 1) * 3);
                 }
             }
-            //only first run should load data into cache, as such, only 5 load should be executed instead of 30
+            // only first run should load data into cache, as such, only 5 load should be executed
+            // instead of 30
             for (CacheWithStatistics cache1 : caches) {
                 assertEquals(cache1.count, 5);
             }
@@ -49,8 +45,7 @@ public class LRUCacheTest
     }
 
     @Test
-    public void testLimitIsRespected() throws Exception
-    {
+    public void testLimitIsRespected() throws Exception {
         // size is respected by guava but we could have some type of bug :)
         final ILRUCache<Long, Integer> cache = LRUCache.createCache(2, new CountWeigher());
         final CacheWithStatistics[] caches = CacheWithStatistics.withStatistics(cache, 2);
@@ -74,20 +69,17 @@ public class LRUCacheTest
         assertEquals(caches[1].count, 2);
     }
 
-    private static class CacheWithStatistics
-    {
+    private static class CacheWithStatistics {
         private final ILRUCache<Long, Integer> cache;
         private final int i;
         private int count;
 
-        private CacheWithStatistics(ILRUCache<Long, Integer> cache, final int i)
-        {
+        private CacheWithStatistics(ILRUCache<Long, Integer> cache, final int i) {
             this.cache = cache;
             this.i = i;
         }
 
-        static CacheWithStatistics[] withStatistics(ILRUCache<Long, Integer> cache, int clients)
-        {
+        static CacheWithStatistics[] withStatistics(ILRUCache<Long, Integer> cache, int clients) {
             final CacheWithStatistics[] caches = new CacheWithStatistics[clients];
             for (int i = 0; i < clients; ++i) {
                 caches[i] = new CacheWithStatistics(cache, i);
@@ -95,21 +87,19 @@ public class LRUCacheTest
             return caches;
         }
 
-        public Integer load(final Integer key) throws ExecutionException
-        {
-            return cache.load(((long) i) << 32 | key, () -> {
-                count++;
-                return key * (i + 1) * 3;
-
-            });
+        public Integer load(final Integer key) throws ExecutionException {
+            return cache.load(
+                    ((long) i) << 32 | key,
+                    () -> {
+                        count++;
+                        return key * (i + 1) * 3;
+                    });
         }
     }
 
-    private static class CountWeigher implements Weigher<Long, Integer>
-    {
+    private static class CountWeigher implements Weigher<Long, Integer> {
         @Override
-        public int weigh(Long key, Integer value)
-        {
+        public int weigh(Long key, Integer value) {
             return 1;
         }
     }

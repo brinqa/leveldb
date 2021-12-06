@@ -20,11 +20,8 @@ package org.iq80.leveldb.table;
 
 import org.iq80.leveldb.util.Slice;
 
-/**
- * @author Honore Vasconcelos
- */
-public interface KeyValueFunction<T>
-{
+/** @author Honore Vasconcelos */
+public interface KeyValueFunction<T> {
     /**
      * Function to apply on first entry after seeking in a table.
      *

@@ -21,11 +21,8 @@ import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.util.Slice;
 
 /**
- * <p>A common interface for internal iterators.</p>
+ * A common interface for internal iterators.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface InternalIterator
-        extends SeekingIterator<InternalKey, Slice>
-{
-}
+public interface InternalIterator extends SeekingIterator<InternalKey, Slice> {}

@@ -17,33 +17,28 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.Slices;
-
 import static org.iq80.leveldb.impl.ValueType.DELETION;
 import static org.iq80.leveldb.impl.ValueType.VALUE;
 
-final class InsertIntoHandler
-        implements WriteBatchImpl.Handler
-{
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.Slices;
+
+final class InsertIntoHandler implements WriteBatchImpl.Handler {
     private long sequence;
     private final MemTable memTable;
 
-    public InsertIntoHandler(MemTable memTable, long sequenceBegin)
-    {
+    public InsertIntoHandler(MemTable memTable, long sequenceBegin) {
         this.memTable = memTable;
         this.sequence = sequenceBegin;
     }
 
     @Override
-    public void put(Slice key, Slice value)
-    {
+    public void put(Slice key, Slice value) {
         memTable.add(sequence++, VALUE, key, value);
     }
 
     @Override
-    public void delete(Slice key)
-    {
+    public void delete(Slice key) {
         memTable.add(sequence++, DELETION, key, Slices.EMPTY_SLICE);
     }
 }

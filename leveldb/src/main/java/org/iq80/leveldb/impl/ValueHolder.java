@@ -17,15 +17,11 @@
  */
 package org.iq80.leveldb.impl;
 
-/**
- * Value holder for reference modification like in C++
- */
-final class ValueHolder<V>
-{
+/** Value holder for reference modification like in C++ */
+final class ValueHolder<V> {
     private V value;
 
-    public ValueHolder(V value)
-    {
+    public ValueHolder(V value) {
         this.value = value;
     }
 
@@ -34,8 +30,7 @@ final class ValueHolder<V>
      *
      * @param value Value to set for property 'value'.
      */
-    public void setValue(V value)
-    {
+    public void setValue(V value) {
         this.value = value;
     }
 
@@ -44,8 +39,7 @@ final class ValueHolder<V>
      *
      * @return Value for property 'value'.
      */
-    public V getValue()
-    {
+    public V getValue() {
         return value;
     }
 }

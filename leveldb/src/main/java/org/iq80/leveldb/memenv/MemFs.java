@@ -17,9 +17,6 @@
  */
 package org.iq80.leveldb.memenv;
 
-import org.iq80.leveldb.env.DbLock;
-import org.iq80.leveldb.env.File;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -31,17 +28,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.iq80.leveldb.env.DbLock;
+import org.iq80.leveldb.env.File;
 
-class MemFs
-{
+class MemFs {
     public static final char SEPARATOR_CHAR = '/';
     public static final String SEPARATOR = "/";
     private final Object lock = new Object();
     private final Set<MemFile> dirs = new HashSet<>();
     private final Map<MemFile, FileState> maps = new HashMap<>();
 
-    public File createTempDir(String prefix)
-    {
+    public File createTempDir(String prefix) {
         synchronized (lock) {
             MemFile e;
             do {
@@ -58,8 +55,7 @@ class MemFs
         }
     }
 
-    public FileState requireFile(MemFile file) throws FileNotFoundException
-    {
+    public FileState requireFile(MemFile file) throws FileNotFoundException {
         FileState fileState;
         synchronized (lock) {
             fileState = maps.get(file);
@@ -70,23 +66,22 @@ class MemFs
         return fileState;
     }
 
-    public FileState getOrCreateFile(MemFile file) throws IOException
-    {
+    public FileState getOrCreateFile(MemFile file) throws IOException {
         FileState fileState;
         synchronized (lock) {
             if (dirs.contains(file)) {
                 throw new IOException(file + " is a directory");
             }
             if (!dirs.contains(file.getParentFile())) {
-                throw new IOException("Unable to create file " + file + ", parent directory does not exist");
+                throw new IOException(
+                        "Unable to create file " + file + ", parent directory does not exist");
             }
             fileState = maps.computeIfAbsent(file, memFile -> new FileState());
         }
         return fileState;
     }
 
-    public boolean mkdirs(MemFile memFile)
-    {
+    public boolean mkdirs(MemFile memFile) {
         synchronized (lock) {
             if (maps.containsKey(memFile)) {
                 return false;
@@ -96,63 +91,58 @@ class MemFs
         }
     }
 
-    public boolean canRead(MemFile memFile)
-    {
+    public boolean canRead(MemFile memFile) {
         synchronized (lock) {
             return maps.containsKey(memFile);
         }
     }
 
-    public boolean isFile(MemFile memFile)
-    {
+    public boolean isFile(MemFile memFile) {
         return canRead(memFile);
     }
 
-    public boolean isDirectory(MemFile memFile)
-    {
+    public boolean isDirectory(MemFile memFile) {
         synchronized (lock) {
             return dirs.contains(memFile);
         }
     }
 
-    public Optional<FileState> getFileState(MemFile file)
-    {
+    public Optional<FileState> getFileState(MemFile file) {
         synchronized (lock) {
             return Optional.ofNullable(maps.get(file));
         }
     }
 
-    public boolean delete(MemFile memFile)
-    {
+    public boolean delete(MemFile memFile) {
         synchronized (lock) {
             return maps.remove(memFile) != null || dirs.remove(memFile);
         }
     }
 
-    public List<File> listFiles(MemFile memFile)
-    {
+    public List<File> listFiles(MemFile memFile) {
         synchronized (lock) {
             return children(memFile).collect(Collectors.toList());
         }
     }
 
-    private Stream<MemFile> children(MemFile memFile)
-    {
+    private Stream<MemFile> children(MemFile memFile) {
         String s = memFile.getPath() + SEPARATOR;
         return Stream.concat(maps.keySet().stream(), dirs.stream())
-            .filter(e -> e.getPath().startsWith(s))
-            .map(e -> {
-                int i = e.getPath().indexOf(SEPARATOR, s.length());
-                return i >= 0 ? MemFile.createMemFile(this, e.getPath().substring(0, i)) : e;
-            })
-            .distinct();
+                .filter(e -> e.getPath().startsWith(s))
+                .map(
+                        e -> {
+                            int i = e.getPath().indexOf(SEPARATOR, s.length());
+                            return i >= 0
+                                    ? MemFile.createMemFile(this, e.getPath().substring(0, i))
+                                    : e;
+                        })
+                .distinct();
     }
 
-    public boolean renameTo(MemFile from, MemFile dest)
-    {
+    public boolean renameTo(MemFile from, MemFile dest) {
         synchronized (lock) {
             if (isDirectory(from)) {
-                //not supported, not required by DB
+                // not supported, not required by DB
                 return false;
             }
             if (maps.containsKey(from) && !maps.containsKey(dest)) {
@@ -164,8 +154,7 @@ class MemFs
         return false;
     }
 
-    public boolean deleteRecursively(MemFile memFile)
-    {
+    public boolean deleteRecursively(MemFile memFile) {
         String prefix = memFile.getPath() + SEPARATOR;
         synchronized (lock) {
             boolean r = false;
@@ -176,7 +165,8 @@ class MemFs
                     r = true;
                 }
             }
-            for (Iterator<Map.Entry<MemFile, FileState>> iterator = maps.entrySet().iterator(); iterator.hasNext(); ) {
+            for (Iterator<Map.Entry<MemFile, FileState>> iterator = maps.entrySet().iterator();
+                    iterator.hasNext(); ) {
                 Map.Entry<MemFile, FileState> entry = iterator.next();
                 if (entry.getKey().equals(memFile) || entry.getKey().getPath().startsWith(prefix)) {
                     iterator.remove();
@@ -187,15 +177,13 @@ class MemFs
         }
     }
 
-    public boolean exists(MemFile memFile)
-    {
+    public boolean exists(MemFile memFile) {
         synchronized (lock) {
             return dirs.contains(memFile) || maps.containsKey(memFile);
         }
     }
 
-    public DbLock doLock(MemFile file) throws IOException
-    {
+    public DbLock doLock(MemFile file) throws IOException {
         final FileState orCreateFile;
         synchronized (lock) {
             orCreateFile = getOrCreateFile(file);
@@ -207,27 +195,23 @@ class MemFs
         return new MemDbLock(orCreateFile);
     }
 
-    private class MemDbLock implements DbLock
-    {
+    private class MemDbLock implements DbLock {
         private final FileState file;
         private boolean released;
 
-        public MemDbLock(FileState file)
-        {
+        public MemDbLock(FileState file) {
             this.file = file;
         }
 
         @Override
-        public boolean isValid()
-        {
+        public boolean isValid() {
             synchronized (lock) {
                 return !released;
             }
         }
 
         @Override
-        public void release()
-        {
+        public void release() {
             synchronized (lock) {
                 if (!released) {
                     released = true;

@@ -17,47 +17,42 @@
  */
 package org.iq80.leveldb.table;
 
+import static java.util.Objects.requireNonNull;
+
 import org.iq80.leveldb.DBComparator;
 import org.iq80.leveldb.util.Slice;
 
-import static java.util.Objects.requireNonNull;
-
-public class CustomUserComparator
-        implements UserComparator
-{
+public class CustomUserComparator implements UserComparator {
     private final DBComparator comparator;
 
-    public CustomUserComparator(DBComparator comparator)
-    {
+    public CustomUserComparator(DBComparator comparator) {
         requireNonNull(comparator.name(), "User Comparator name can't be null");
         this.comparator = comparator;
     }
 
     @Override
-    public String name()
-    {
+    public String name() {
         return comparator.name();
     }
 
     @Override
-    public Slice findShortestSeparator(Slice start, Slice limit)
-    {
-        byte[] shortestSeparator = comparator.findShortestSeparator(start.getBytes(), limit.getBytes());
-        requireNonNull(shortestSeparator, "User comparator returned null from findShortestSeparator()");
+    public Slice findShortestSeparator(Slice start, Slice limit) {
+        byte[] shortestSeparator =
+                comparator.findShortestSeparator(start.getBytes(), limit.getBytes());
+        requireNonNull(
+                shortestSeparator, "User comparator returned null from findShortestSeparator()");
         return new Slice(shortestSeparator);
     }
 
     @Override
-    public Slice findShortSuccessor(Slice key)
-    {
+    public Slice findShortSuccessor(Slice key) {
         byte[] shortSuccessor = comparator.findShortSuccessor(key.getBytes());
         requireNonNull(comparator, "User comparator returned null from findShortSuccessor()");
         return new Slice(shortSuccessor);
     }
 
     @Override
-    public int compare(Slice o1, Slice o2)
-    {
+    public int compare(Slice o1, Slice o2) {
         return comparator.compare(o1.getBytes(), o2.getBytes());
     }
 }

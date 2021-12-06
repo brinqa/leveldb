@@ -17,25 +17,31 @@
  */
 package org.iq80.leveldb.impl;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.testng.Assert.assertEquals;
+
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.testng.Assert.assertEquals;
-
-public class InternalKeyTest
-{
+public class InternalKeyTest {
     @Test
-    public void testEncodeDecode() throws Exception
-    {
+    public void testEncodeDecode() throws Exception {
         String[] keys = {"", "k", "hello", "longggggggggggggggggggggg"};
         long[] seq = {
-                1, 2, 3,
-                (1L << 8) - 1, 1L << 8, (1L << 8) + 1,
-                (1L << 16) - 1, 1L << 16, (1L << 16) + 1,
-                (1L << 32) - 1, 1L << 32, (1L << 32) + 1
+            1,
+            2,
+            3,
+            (1L << 8) - 1,
+            1L << 8,
+            (1L << 8) + 1,
+            (1L << 16) - 1,
+            1L << 16,
+            (1L << 16) + 1,
+            (1L << 32) - 1,
+            1L << 32,
+            (1L << 32) + 1
         };
         for (String key : keys) {
             for (long s : seq) {
@@ -46,20 +52,17 @@ public class InternalKeyTest
         try {
             InternalKey internalKey = new InternalKey(new Slice("bar".getBytes(UTF_8)));
             Assert.fail("value " + internalKey + " ot expected");
-        }
-        catch (Exception e) {
-            //expected
+        } catch (Exception e) {
+            // expected
         }
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testDecodeEmpty()
-    {
+    public void testDecodeEmpty() {
         new InternalKey(Slices.wrappedBuffer(new byte[0]));
     }
 
-    private void testKey(String key, long seq, ValueType valueType)
-    {
+    private void testKey(String key, long seq, ValueType valueType) {
         InternalKey k = new InternalKey(Slices.wrappedBuffer(key.getBytes(UTF_8)), seq, valueType);
         InternalKey decoded = new InternalKey(k.encode());
 

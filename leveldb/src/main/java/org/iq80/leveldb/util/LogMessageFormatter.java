@@ -20,18 +20,15 @@ package org.iq80.leveldb.util;
 import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
-public final class LogMessageFormatter
-{
+public final class LogMessageFormatter {
     private static final int DATE_SIZE = 28;
     private final Supplier<LocalDateTime> clock;
 
-    public LogMessageFormatter(Supplier<LocalDateTime> clock)
-    {
+    public LogMessageFormatter(Supplier<LocalDateTime> clock) {
         this.clock = clock;
     }
 
-    public String format(String message)
-    {
+    public String format(String message) {
         final StringBuilder sb = new StringBuilder(message.length() + DATE_SIZE);
         sb.append(clock.get());
         sb.append(' ');
@@ -39,8 +36,7 @@ public final class LogMessageFormatter
         return sb.toString();
     }
 
-    public String format(String template, Object[] args)
-    {
+    public String format(String template, Object[] args) {
         template = String.valueOf(template); // null -> "null"
 
         // start substituting the arguments into the '%s' placeholders

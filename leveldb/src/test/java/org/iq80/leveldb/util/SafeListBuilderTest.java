@@ -17,49 +17,46 @@
  */
 package org.iq80.leveldb.util;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
-public class SafeListBuilderTest
-{
+public class SafeListBuilderTest {
     @Test
-    public void testAllElementAreClosedEvenOnError() throws Exception
-    {
+    public void testAllElementAreClosedEvenOnError() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         SafeListBuilder<Closeable> builder = SafeListBuilder.builder();
         builder.add(counter::incrementAndGet);
-        builder.add(() -> {
-            counter.incrementAndGet();
-            throw new IOException();
-        });
+        builder.add(
+                () -> {
+                    counter.incrementAndGet();
+                    throw new IOException();
+                });
         builder.add(counter::incrementAndGet);
-        builder.add(() -> {
-            counter.incrementAndGet();
-            throw new IOException();
-        });
+        builder.add(
+                () -> {
+                    counter.incrementAndGet();
+                    throw new IOException();
+                });
         builder.add(counter::incrementAndGet);
         assertEquals(counter.get(), 0);
         try {
             builder.close();
             Assert.fail("should fail because not all close succeed");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             assertTrue(e instanceof IOException);
         }
         assertEquals(counter.get(), 5);
     }
 
     @Test
-    public void testCloseWithoutExceptions() throws Exception
-    {
+    public void testCloseWithoutExceptions() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         SafeListBuilder<Closeable> builder = SafeListBuilder.builder();
         builder.add(counter::incrementAndGet);
@@ -69,8 +66,7 @@ public class SafeListBuilderTest
     }
 
     @Test
-    public void testNothingHappenIfBuildWasCalled() throws Exception
-    {
+    public void testNothingHappenIfBuildWasCalled() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         try (SafeListBuilder<Closeable> builder = SafeListBuilder.builder()) {
             builder.add(counter::incrementAndGet);

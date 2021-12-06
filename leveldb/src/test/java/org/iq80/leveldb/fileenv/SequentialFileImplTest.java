@@ -17,31 +17,27 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.util.DynamicSliceOutput;
+import static org.testng.AssertJUnit.assertEquals;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.util.DynamicSliceOutput;
 import org.iq80.leveldb.util.Slice;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.FileOutputStream;
-
-import static org.testng.AssertJUnit.assertEquals;
-
-public class SequentialFileImplTest
-{
+public class SequentialFileImplTest {
     File file;
 
     @BeforeMethod
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         file = File.createTempFile("test", ".log");
     }
 
     @Test
-    public void testCheckReadBounds() throws Exception
-    {
+    public void testCheckReadBounds() throws Exception {
         try (FileOutputStream f = new FileOutputStream(file)) {
             for (int i = 0; i < 200; ++i) {
                 f.write(i);
@@ -60,14 +56,13 @@ public class SequentialFileImplTest
             assertEquals(190, open.read(200, destination1));
             Slice slice1 = destination1.slice();
             assertEquals(new Slice(bytes), slice1);
-            assertEquals(-1, open.read(10, new DynamicSliceOutput(10))); //EOF
-            assertEquals(0, open.read(0, new DynamicSliceOutput(10))); //EOF
+            assertEquals(-1, open.read(10, new DynamicSliceOutput(10))); // EOF
+            assertEquals(0, open.read(0, new DynamicSliceOutput(10))); // EOF
         }
     }
 
     @AfterMethod
-    public void tearDown()
-    {
+    public void tearDown() {
         file.delete();
     }
 }

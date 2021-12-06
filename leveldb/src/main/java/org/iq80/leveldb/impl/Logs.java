@@ -17,37 +17,32 @@
  */
 package org.iq80.leveldb.impl;
 
+import java.io.IOException;
 import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.WritableFile;
 import org.iq80.leveldb.util.PureJavaCrc32C;
 import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.env.WritableFile;
 
-import org.iq80.leveldb.env.File;
-import java.io.IOException;
+public final class Logs {
+    private Logs() {}
 
-public final class Logs
-{
-    private Logs()
-    {
-    }
-
-    public static LogWriter createLogWriter(File file, long fileNumber, Env env) throws IOException
-    {
+    public static LogWriter createLogWriter(File file, long fileNumber, Env env)
+            throws IOException {
         return LogWriter.createWriter(fileNumber, env.newWritableFile(file));
     }
 
-    public static LogWriter createLogWriter(long fileNumber, WritableFile writableFile, long destinationLength) throws IOException
-    {
+    public static LogWriter createLogWriter(
+            long fileNumber, WritableFile writableFile, long destinationLength) throws IOException {
         return LogWriter.createWriter(fileNumber, writableFile, destinationLength);
     }
 
-    public static int getChunkChecksum(int chunkTypeId, Slice slice)
-    {
-        return getChunkChecksum(chunkTypeId, slice.getRawArray(), slice.getRawOffset(), slice.length());
+    public static int getChunkChecksum(int chunkTypeId, Slice slice) {
+        return getChunkChecksum(
+                chunkTypeId, slice.getRawArray(), slice.getRawOffset(), slice.length());
     }
 
-    public static int getChunkChecksum(int chunkTypeId, byte[] buffer, int offset, int length)
-    {
+    public static int getChunkChecksum(int chunkTypeId, byte[] buffer, int offset, int length) {
         // Compute the crc of the record type and the payload.
         PureJavaCrc32C crc32C = new PureJavaCrc32C();
         crc32C.update(chunkTypeId);

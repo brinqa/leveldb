@@ -17,9 +17,8 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.env.RandomInputFile;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,45 +27,40 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import org.iq80.leveldb.env.RandomInputFile;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-
-public class UnbufferedRandomInputFileTest
-{
+public class UnbufferedRandomInputFileTest {
     @Test
-    public void testResilientToThreadInterruptOnReaderThread() throws IOException
-    {
+    public void testResilientToThreadInterruptOnReaderThread() throws IOException {
         File file = File.createTempFile("table", ".db");
         try (final FileOutputStream fileOutputStream = new FileOutputStream(file)) {
             fileOutputStream.write(new byte[1024]);
         }
         try (final RandomInputFile open = UnbufferedRandomInputFile.open(file)) {
-            //mark current thread as interrupted
+            // mark current thread as interrupted
             Thread.currentThread().interrupt();
             try {
                 open.read(200, 200);
                 Assert.fail("Should have failed with ClosedByInterruptException");
+            } catch (ClosedByInterruptException e) {
+                // reader that was interrupted is expected fail at this point
+                // no other threads
             }
-            catch (ClosedByInterruptException e) {
-                //reader that was interrupted is expected fail at this point
-                //no other threads
-            }
-            //clear current thread interrupt
+            // clear current thread interrupt
             Thread.interrupted();
 
-            //verify file is still accessible after previous failure
+            // verify file is still accessible after previous failure
             final ByteBuffer read = open.read(200, 200);
             assertEquals(read.remaining(), 200);
-        }
-        finally {
+        } finally {
             file.delete();
         }
     }
 
     @Test
-    public void testResilientToThreadInterruptOnReaderThreadMultiThread() throws Exception
-    {
+    public void testResilientToThreadInterruptOnReaderThreadMultiThread() throws Exception {
         File file = File.createTempFile("table", ".db");
         final byte[] bytes = new byte[1024];
         new Random().nextBytes(bytes);
@@ -96,14 +90,12 @@ public class UnbufferedRandomInputFileTest
                 reader.join();
                 assertFalse(reader.failed);
             }
-        }
-        finally {
+        } finally {
             file.delete();
         }
     }
 
-    private static class Reader extends Thread
-    {
+    private static class Reader extends Thread {
         private final RandomInputFile reader;
         private final byte[] content;
         private final byte[] result;
@@ -114,15 +106,13 @@ public class UnbufferedRandomInputFileTest
 
         private Object lock = false;
 
-        public Reader(RandomInputFile reader, byte[] content)
-        {
+        public Reader(RandomInputFile reader, byte[] content) {
             this.reader = reader;
             this.content = content;
             this.result = new byte[content.length];
         }
 
-        public void fireInterrupt()
-        {
+        public void fireInterrupt() {
             synchronized (lock) {
                 if (!wasInterrupted) {
                     wasInterrupted = true;
@@ -131,13 +121,11 @@ public class UnbufferedRandomInputFileTest
             }
         }
 
-        public boolean exceptionNoticed()
-        {
+        public boolean exceptionNoticed() {
             synchronized (lock) {
                 if (!wasInterrupted || !Thread.interrupted()) {
                     failed = true;
-                }
-                else {
+                } else {
                     interruptCount++;
                     wasInterrupted = false;
                 }
@@ -145,16 +133,14 @@ public class UnbufferedRandomInputFileTest
             return failed;
         }
 
-        public int getCount()
-        {
+        public int getCount() {
             synchronized (lock) {
                 return interruptCount;
             }
         }
 
         @Override
-        public void run()
-        {
+        public void run() {
             final Random random = new Random(this.getId());
             while (!stop && !failed) {
                 if (random.nextInt(100) > 90) {
@@ -165,8 +151,7 @@ public class UnbufferedRandomInputFileTest
                     read.get(this.result);
                     assertEquals(this.result, this.content);
                     assertEquals(read.remaining(), 0);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     if (exceptionNoticed()) {
                         return;
                     }

@@ -21,7 +21,6 @@ package org.iq80.leveldb.util;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -30,49 +29,42 @@ import java.util.concurrent.ExecutionException;
  *
  * @author Honore Vasconcelos
  */
-public final class LRUCache<K, V>
-        implements ILRUCache<K, V>
-{
+public final class LRUCache<K, V> implements ILRUCache<K, V> {
     private final Cache<K, V> cache;
     private final Weigher<K, V> weigher;
 
-    private LRUCache(int capacity, final Weigher<K, V> weigher)
-    {
-        this.cache = CacheBuilder.newBuilder()
-                .maximumWeight(capacity)
-                .weigher(weigher)
-                .concurrencyLevel(1 << 4)
-                .build();
+    private LRUCache(int capacity, final Weigher<K, V> weigher) {
+        this.cache =
+                CacheBuilder.newBuilder()
+                        .maximumWeight(capacity)
+                        .weigher(weigher)
+                        .concurrencyLevel(1 << 4)
+                        .build();
         this.weigher = weigher;
     }
 
-    public static <K, V> ILRUCache<K, V> createCache(int capacity, final Weigher<K, V> weigher)
-    {
+    public static <K, V> ILRUCache<K, V> createCache(int capacity, final Weigher<K, V> weigher) {
         return new LRUCache<>(capacity, weigher);
     }
 
-    public V load(final K key, Callable<V> loader) throws ExecutionException
-    {
+    public V load(final K key, Callable<V> loader) throws ExecutionException {
         return cache.get(key, loader);
     }
 
     @Override
-    public long getApproximateMemoryUsage()
-    {
+    public long getApproximateMemoryUsage() {
         return cache.asMap().entrySet().stream()
                 .mapToLong(e -> weigher.weigh(e.getKey(), e.getValue()))
                 .sum();
     }
 
     @Override
-    public V getIfPresent(K key)
-    {
+    public V getIfPresent(K key) {
         return cache.getIfPresent(key);
     }
 
     @Override
-    public void invalidateAll()
-    {
+    public void invalidateAll() {
         cache.invalidateAll();
     }
 }

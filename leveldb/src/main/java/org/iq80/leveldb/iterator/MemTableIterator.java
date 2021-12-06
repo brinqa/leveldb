@@ -19,55 +19,49 @@ package org.iq80.leveldb.iterator;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentNavigableMap;
 import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.util.Slice;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentNavigableMap;
-
-public final class MemTableIterator
-        extends ASeekingIterator<InternalKey, Slice> implements InternalIterator
-{
+public final class MemTableIterator extends ASeekingIterator<InternalKey, Slice>
+        implements InternalIterator {
     private PeekingIterator<Map.Entry<InternalKey, Slice>> iterator;
     private Map.Entry<InternalKey, Slice> entry;
     private final ConcurrentNavigableMap<InternalKey, Slice> table;
 
-    public MemTableIterator(ConcurrentNavigableMap<InternalKey, Slice> table)
-    {
+    public MemTableIterator(ConcurrentNavigableMap<InternalKey, Slice> table) {
         this.table = table;
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         iterator = Iterators.peekingIterator(table.entrySet().iterator());
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         iterator = Iterators.peekingIterator(table.descendingMap().entrySet().iterator());
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalSeek(InternalKey targetKey)
-    {
+    protected boolean internalSeek(InternalKey targetKey) {
         iterator = Iterators.peekingIterator(table.tailMap(targetKey).entrySet().iterator());
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         if (switchDirection) {
-            iterator = Iterators.peekingIterator(table.tailMap(entry.getKey()).entrySet().iterator());
+            iterator =
+                    Iterators.peekingIterator(table.tailMap(entry.getKey()).entrySet().iterator());
             if (iterator.hasNext()) {
-                iterator.next(); //skip "entry"
+                iterator.next(); // skip "entry"
             }
         }
         entry = iterator.hasNext() ? iterator.next() : null;
@@ -75,12 +69,13 @@ public final class MemTableIterator
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         if (switchDirection) {
-            iterator = Iterators.peekingIterator(table.descendingMap().tailMap(entry.getKey()).entrySet().iterator());
+            iterator =
+                    Iterators.peekingIterator(
+                            table.descendingMap().tailMap(entry.getKey()).entrySet().iterator());
             if (iterator.hasNext()) {
-                iterator.next(); //skip "entry"
+                iterator.next(); // skip "entry"
             }
         }
         entry = iterator.hasNext() ? iterator.next() : null;
@@ -88,20 +83,17 @@ public final class MemTableIterator
     }
 
     @Override
-    protected InternalKey internalKey()
-    {
+    protected InternalKey internalKey() {
         return entry.getKey();
     }
 
     @Override
-    protected Slice internalValue()
-    {
+    protected Slice internalValue() {
         return entry.getValue();
     }
 
     @Override
-    public void internalClose()
-    {
+    public void internalClose() {
         iterator = null;
     }
 }

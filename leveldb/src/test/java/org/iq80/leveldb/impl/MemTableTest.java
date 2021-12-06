@@ -17,7 +17,16 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.iq80.leveldb.util.TestUtils.asciiToBytes;
+import static org.iq80.leveldb.util.TestUtils.asciiToSlice;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.iq80.leveldb.iterator.DBIteratorAdapter;
 import org.iq80.leveldb.iterator.DbIterator;
 import org.iq80.leveldb.iterator.MemTableIterator;
@@ -30,25 +39,12 @@ import org.iq80.leveldb.table.BytewiseComparator;
 import org.iq80.leveldb.util.Slice;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static org.iq80.leveldb.util.TestUtils.asciiToBytes;
-import static org.iq80.leveldb.util.TestUtils.asciiToSlice;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
-
-public class MemTableTest
-{
-    /**
-     * skipFirst + iter to last ok
-     */
+public class MemTableTest {
+    /** skipFirst + iter to last ok */
     @Test
-    public void testTestSimple() throws Exception
-    {
-        final MemTableIterator iter = getMemTableIterator(new InternalKeyComparator(new BytewiseComparator()));
+    public void testTestSimple() throws Exception {
+        final MemTableIterator iter =
+                getMemTableIterator(new InternalKeyComparator(new BytewiseComparator()));
         assertTrue(iter.seekToFirst());
         assertEntry(iter, "k1", "v1", 101);
         assertTrue(iter.next());
@@ -63,8 +59,7 @@ public class MemTableTest
     }
 
     @Test
-    public void testMemIterator()
-    {
+    public void testMemIterator() {
         BytewiseComparator userComparator = new BytewiseComparator();
         InternalKeyComparator cmp = new InternalKeyComparator(userComparator);
         final MemTableIterator iter = getMemTableIterator(cmp);
@@ -72,20 +67,21 @@ public class MemTableTest
     }
 
     @Test
-    public void testDbIterator()
-    {
+    public void testDbIterator() {
         BytewiseComparator userComparator = new BytewiseComparator();
         InternalKeyComparator cmp = new InternalKeyComparator(userComparator);
         final MemTableIterator iter = getMemTableIterator(cmp);
         MergingIterator mIter = new MergingIterator(Lists.newArrayList(iter), cmp);
-        testUserKey(new SnapshotSeekingIterator(new DbIterator(mIter, () -> {
-        }), Integer.MAX_VALUE, userComparator, (internalKey, bytes) -> {
-        }));
+        testUserKey(
+                new SnapshotSeekingIterator(
+                        new DbIterator(mIter, () -> {}),
+                        Integer.MAX_VALUE,
+                        userComparator,
+                        (internalKey, bytes) -> {}));
     }
 
     @Test
-    public void testMergingIterator()
-    {
+    public void testMergingIterator() {
         BytewiseComparator userComparator = new BytewiseComparator();
         InternalKeyComparator cmp = new InternalKeyComparator(userComparator);
         final MemTableIterator iter = getMemTableIterator(cmp);
@@ -94,22 +90,26 @@ public class MemTableTest
     }
 
     @Test
-    public void testSeekingIteratorAdapter()
-    {
+    public void testSeekingIteratorAdapter() {
         BytewiseComparator userComparator = new BytewiseComparator();
         InternalKeyComparator cmp = new InternalKeyComparator(userComparator);
         final MemTableIterator iter = getMemTableIterator(cmp);
         MergingIterator mIter = new MergingIterator(Lists.newArrayList(iter), cmp);
-        DBIteratorAdapter adapter = new DBIteratorAdapter(new SnapshotSeekingIterator(new DbIterator(mIter, () -> {
-        }), Integer.MAX_VALUE, userComparator, (internalKey, bytes) -> {
-        }));
-        SeekingIterator<Slice, Slice> sliceSliceSeekingIterator = SeekingDBIteratorAdapter.toSeekingIterator(adapter, Slice::getBytes, Slice::new, Slice::new);
+        DBIteratorAdapter adapter =
+                new DBIteratorAdapter(
+                        new SnapshotSeekingIterator(
+                                new DbIterator(mIter, () -> {}),
+                                Integer.MAX_VALUE,
+                                userComparator,
+                                (internalKey, bytes) -> {}));
+        SeekingIterator<Slice, Slice> sliceSliceSeekingIterator =
+                SeekingDBIteratorAdapter.toSeekingIterator(
+                        adapter, Slice::getBytes, Slice::new, Slice::new);
         testUserKey(sliceSliceSeekingIterator);
     }
 
     @Test
-    public void testCollectionIterator()
-    {
+    public void testCollectionIterator() {
         BytewiseComparator userComparator = new BytewiseComparator();
         InternalKeyComparator cmp = new InternalKeyComparator(userComparator);
         final MemTableIterator iter = getMemTableIterator(cmp);
@@ -117,12 +117,13 @@ public class MemTableTest
         while (iter.next()) {
             objects.add(new InternalEntry(iter.key(), iter.value()));
         }
-        SeekingIterator<InternalKey, Slice> internalKeySliceSeekingIterator = SeekingIterators.fromSortedList(objects, Map.Entry::getKey, Map.Entry::getValue, cmp);
+        SeekingIterator<InternalKey, Slice> internalKeySliceSeekingIterator =
+                SeekingIterators.fromSortedList(
+                        objects, Map.Entry::getKey, Map.Entry::getValue, cmp);
         test(internalKeySliceSeekingIterator);
     }
 
-    private void test(SeekingIterator<InternalKey, Slice> iter)
-    {
+    private void test(SeekingIterator<InternalKey, Slice> iter) {
         assertTrue(iter.next());
         assertEntry(iter, "k1", "v1", 101);
         assertTrue(iter.seekToFirst());
@@ -147,11 +148,9 @@ public class MemTableTest
         assertEntry(iter, "largekey", "vlarge", 104);
         assertFalse(iter.seek(new InternalKey(asciiToSlice("largekey"), 100, ValueType.VALUE)));
         assertFalse(iter.valid());
-
     }
 
-    private void testUserKey(SeekingIterator<Slice, Slice> iter)
-    {
+    private void testUserKey(SeekingIterator<Slice, Slice> iter) {
         assertTrue(iter.next());
         assertEntry(iter, "k1", "v1");
         assertTrue(iter.seekToFirst());
@@ -178,8 +177,7 @@ public class MemTableTest
         assertFalse(iter.valid());
     }
 
-    private MemTableIterator getMemTableIterator(InternalKeyComparator cmp)
-    {
+    private MemTableIterator getMemTableIterator(InternalKeyComparator cmp) {
         final MemTable memtable = new MemTable(cmp);
         WriteBatchImpl batch = new WriteBatchImpl();
         batch.put(asciiToBytes("k1"), asciiToBytes("v1p"));
@@ -191,14 +189,17 @@ public class MemTableTest
         return memtable.iterator();
     }
 
-    private void assertEntry(SeekingIterator<InternalKey, Slice> iter, String key, String value, int sequenceNumber)
-    {
-        assertEquals(new InternalKey(asciiToSlice(key), sequenceNumber, ValueType.VALUE), iter.key());
+    private void assertEntry(
+            SeekingIterator<InternalKey, Slice> iter,
+            String key,
+            String value,
+            int sequenceNumber) {
+        assertEquals(
+                new InternalKey(asciiToSlice(key), sequenceNumber, ValueType.VALUE), iter.key());
         assertEquals(asciiToSlice(value), iter.value());
     }
 
-    private void assertEntry(SeekingIterator<Slice, Slice> iter, String key, String value)
-    {
+    private void assertEntry(SeekingIterator<Slice, Slice> iter, String key, String value) {
         assertEquals(asciiToSlice(key), iter.key());
         assertEquals(asciiToSlice(value), iter.value());
     }

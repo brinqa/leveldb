@@ -17,54 +17,53 @@
  */
 package org.iq80.leveldb.iterator;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
 
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static java.util.Objects.requireNonNull;
-
-public class DBIteratorAdapter
-        implements DBIterator
-{
+public class DBIteratorAdapter implements DBIterator {
     private static final String ILLEGAL_STATE = "Illegal use of iterator after release";
     private final SnapshotSeekingIterator seekingIterator;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private Direction direction = Direction.FORWARD;
     private DbEntry elem;
 
-    public DBIteratorAdapter(SnapshotSeekingIterator seekingIterator)
-    {
+    public DBIteratorAdapter(SnapshotSeekingIterator seekingIterator) {
         this.seekingIterator = seekingIterator;
     }
 
     @Override
-    public void seekToFirst()
-    {
+    public void seekToFirst() {
         if (direction == Direction.RELEASED) {
             throw new DBException(ILLEGAL_STATE);
         }
         direction = Direction.FORWARD;
-        elem = seekingIterator.seekToFirst() ? new DbEntry(seekingIterator.key(), seekingIterator.value()) : null;
+        elem =
+                seekingIterator.seekToFirst()
+                        ? new DbEntry(seekingIterator.key(), seekingIterator.value())
+                        : null;
     }
 
     @Override
-    public void seek(byte[] targetKey)
-    {
+    public void seek(byte[] targetKey) {
         if (direction == Direction.RELEASED) {
             throw new DBException(ILLEGAL_STATE);
         }
         direction = Direction.FORWARD;
-        elem = seekingIterator.seek(Slices.wrappedBuffer(targetKey)) ? new DbEntry(seekingIterator.key(), seekingIterator.value()) : null;
+        elem =
+                seekingIterator.seek(Slices.wrappedBuffer(targetKey))
+                        ? new DbEntry(seekingIterator.key(), seekingIterator.value())
+                        : null;
     }
 
     @Override
-    public boolean hasNext()
-    {
+    public boolean hasNext() {
         if (direction == Direction.RELEASED) {
             throw new DBException(ILLEGAL_STATE);
         }
@@ -73,14 +72,16 @@ public class DBIteratorAdapter
             direction = Direction.FORWARD;
         }
         if (elem == null) {
-            elem = seekingIterator.next() ? new DbEntry(seekingIterator.key(), seekingIterator.value()) : null;
+            elem =
+                    seekingIterator.next()
+                            ? new DbEntry(seekingIterator.key(), seekingIterator.value())
+                            : null;
         }
         return elem != null;
     }
 
     @Override
-    public DbEntry next()
-    {
+    public DbEntry next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
@@ -90,8 +91,7 @@ public class DBIteratorAdapter
     }
 
     @Override
-    public DbEntry peekNext()
-    {
+    public DbEntry peekNext() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
@@ -99,8 +99,7 @@ public class DBIteratorAdapter
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
         // This is an end user API.. he might screw up and close multiple times.
         // but we don't want the close multiple times as reference counts go bad.
         if (closed.compareAndSet(false, true)) {
@@ -110,24 +109,24 @@ public class DBIteratorAdapter
     }
 
     @Override
-    public void remove()
-    {
+    public void remove() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void seekToLast()
-    {
+    public void seekToLast() {
         if (direction == Direction.RELEASED) {
             throw new DBException(ILLEGAL_STATE);
         }
         direction = Direction.REVERSE;
-        elem = seekingIterator.seekToLast() ? new DbEntry(seekingIterator.key(), seekingIterator.value()) : null;
+        elem =
+                seekingIterator.seekToLast()
+                        ? new DbEntry(seekingIterator.key(), seekingIterator.value())
+                        : null;
     }
 
     @Override
-    public boolean hasPrev()
-    {
+    public boolean hasPrev() {
         if (direction == Direction.RELEASED) {
             throw new DBException(ILLEGAL_STATE);
         }
@@ -136,14 +135,16 @@ public class DBIteratorAdapter
             direction = Direction.REVERSE;
         }
         if (elem == null) {
-            elem = seekingIterator.prev() ? new DbEntry(seekingIterator.key(), seekingIterator.value()) : null;
+            elem =
+                    seekingIterator.prev()
+                            ? new DbEntry(seekingIterator.key(), seekingIterator.value())
+                            : null;
         }
         return elem != null;
     }
 
     @Override
-    public DbEntry prev()
-    {
+    public DbEntry prev() {
         if (!hasPrev()) {
             throw new NoSuchElementException();
         }
@@ -153,22 +154,18 @@ public class DBIteratorAdapter
     }
 
     @Override
-    public DbEntry peekPrev()
-    {
+    public DbEntry peekPrev() {
         if (!hasPrev()) {
             throw new NoSuchElementException();
         }
         return this.elem;
     }
 
-    public static class DbEntry
-            implements Entry<byte[], byte[]>
-    {
+    public static class DbEntry implements Entry<byte[], byte[]> {
         private final Slice key;
         private final Slice value;
 
-        public DbEntry(Slice key, Slice value)
-        {
+        public DbEntry(Slice key, Slice value) {
             requireNonNull(key, "key is null");
             requireNonNull(value, "value is null");
             this.key = key;
@@ -176,56 +173,45 @@ public class DBIteratorAdapter
         }
 
         @Override
-        public byte[] getKey()
-        {
+        public byte[] getKey() {
             return key.getBytes();
         }
 
-        public Slice getKeySlice()
-        {
+        public Slice getKeySlice() {
             return key;
         }
 
         @Override
-        public byte[] getValue()
-        {
+        public byte[] getValue() {
             return value.getBytes();
         }
 
-        public Slice getValueSlice()
-        {
+        public Slice getValueSlice() {
             return value;
         }
 
         @Override
-        public byte[] setValue(byte[] value)
-        {
+        public byte[] setValue(byte[] value) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public boolean equals(Object object)
-        {
+        public boolean equals(Object object) {
             if (object instanceof Entry) {
                 Entry<?, ?> that = (Entry<?, ?>) object;
-                return key.equals(that.getKey()) &&
-                        value.equals(that.getValue());
+                return key.equals(that.getKey()) && value.equals(that.getValue());
             }
             return false;
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             return key.hashCode() ^ value.hashCode();
         }
 
-        /**
-         * Returns a string representation of the form <code>{key}={value}</code>.
-         */
+        /** Returns a string representation of the form <code>{key}={value}</code>. */
         @Override
-        public String toString()
-        {
+        public String toString() {
             return key + "=" + value;
         }
     }

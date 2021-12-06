@@ -17,114 +17,81 @@
  */
 package org.iq80.leveldb.impl;
 
-import com.google.common.base.Strings;
-import org.iq80.leveldb.env.Env;
-import org.iq80.leveldb.env.File;
-
-import java.io.IOException;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Long.parseUnsignedLong;
 import static java.util.Objects.requireNonNull;
 
-public final class Filename
-{
-    private Filename()
-    {
-    }
+import com.google.common.base.Strings;
+import java.io.IOException;
+import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
 
-    public enum FileType
-    {
+public final class Filename {
+    private Filename() {}
+
+    public enum FileType {
         LOG,
         DB_LOCK,
         TABLE,
         DESCRIPTOR,
         CURRENT,
         TEMP,
-        INFO_LOG  // Either the current one, or an old one
+        INFO_LOG // Either the current one, or an old one
     }
 
-    /**
-     * Return the name of the log file with the specified number.
-     */
-    public static String logFileName(long number)
-    {
+    /** Return the name of the log file with the specified number. */
+    public static String logFileName(long number) {
         return makeFileName(number, "log");
     }
 
-    /**
-     * Return the name of the sstable with the specified number.
-     */
-    public static String tableFileName(long number)
-    {
+    /** Return the name of the sstable with the specified number. */
+    public static String tableFileName(long number) {
         return makeFileName(number, "ldb");
     }
 
-    /**
-     * Return the deprecated name of the sstable with the specified number.
-     */
-    public static String sstTableFileName(long number)
-    {
+    /** Return the deprecated name of the sstable with the specified number. */
+    public static String sstTableFileName(long number) {
         return makeFileName(number, "sst");
     }
 
-    /**
-     * Return the name of the descriptor file with the specified incarnation number.
-     */
-    public static String descriptorFileName(long number)
-    {
+    /** Return the name of the descriptor file with the specified incarnation number. */
+    public static String descriptorFileName(long number) {
         checkArgument(number >= 0, "number is negative");
         return String.format("MANIFEST-%06d", number);
     }
 
-    /**
-     * Return the name of the current file.
-     */
-    public static String currentFileName()
-    {
+    /** Return the name of the current file. */
+    public static String currentFileName() {
         return "CURRENT";
     }
 
-    /**
-     * Return the name of the lock file.
-     */
-    public static String lockFileName()
-    {
+    /** Return the name of the lock file. */
+    public static String lockFileName() {
         return "LOCK";
     }
 
-    /**
-     * Return the name of a temporary file with the specified number.
-     */
-    public static String tempFileName(long number)
-    {
+    /** Return the name of a temporary file with the specified number. */
+    public static String tempFileName(long number) {
         return makeFileName(number, "dbtmp");
     }
 
-    /**
-     * Return the name of the info log file.
-     */
-    public static String infoLogFileName()
-    {
+    /** Return the name of the info log file. */
+    public static String infoLogFileName() {
         return "LOG";
     }
 
-    /**
-     * Return the name of the old info log file.
-     */
-    public static String oldInfoLogFileName()
-    {
+    /** Return the name of the old info log file. */
+    public static String oldInfoLogFileName() {
         return "LOG.old";
     }
 
     /**
-     * If filename is a leveldb file, store the type of the file in *type.
-     * The number encoded in the filename is stored in *number.  If the
-     * filename was successfully parsed, returns true.  Else return false.
+     * If filename is a leveldb file, store the type of the file in *type. The number encoded in the
+     * filename is stored in *number. If the filename was successfully parsed, returns true. Else
+     * return false.
      */
-    public static FileInfo parseFileName(File file)
-    {
+    public static FileInfo parseFileName(File file) {
         // Owned filenames have the form:
         //    dbname/CURRENT
         //    dbname/LOCK
@@ -136,53 +103,42 @@ public final class Filename
             String fileName = file.getName();
             if ("CURRENT".equals(fileName)) {
                 return new FileInfo(FileType.CURRENT);
-            }
-            else if ("LOCK".equals(fileName)) {
+            } else if ("LOCK".equals(fileName)) {
                 return new FileInfo(FileType.DB_LOCK);
-            }
-            else if ("LOG".equals(fileName) || "LOG.old".equals(fileName)) {
+            } else if ("LOG".equals(fileName) || "LOG.old".equals(fileName)) {
                 return new FileInfo(FileType.INFO_LOG);
-            }
-            else if (fileName.startsWith("MANIFEST-")) {
+            } else if (fileName.startsWith("MANIFEST-")) {
                 long fileNumber = parseLong(removePrefix(fileName, "MANIFEST-"));
                 return new FileInfo(FileType.DESCRIPTOR, fileNumber);
-            }
-            else if (fileName.endsWith(".log")) {
+            } else if (fileName.endsWith(".log")) {
                 long fileNumber = parseLong(removeSuffix(fileName, ".log"));
                 return new FileInfo(FileType.LOG, fileNumber);
-            }
-            else if (fileName.endsWith(".sst") || fileName.endsWith(".ldb")) {
+            } else if (fileName.endsWith(".sst") || fileName.endsWith(".ldb")) {
                 long fileNumber = parseLong(fileName.substring(0, fileName.lastIndexOf('.')));
                 return new FileInfo(FileType.TABLE, fileNumber);
-            }
-            else if (fileName.endsWith(".dbtmp")) {
+            } else if (fileName.endsWith(".dbtmp")) {
                 long fileNumber = parseLong(removeSuffix(fileName, ".dbtmp"));
                 return new FileInfo(FileType.TEMP, fileNumber);
             }
-        }
-        catch (Exception ignore) {
-            //filename is incorrect/not supported
+        } catch (Exception ignore) {
+            // filename is incorrect/not supported
         }
         return null;
     }
 
-    /**
-     * Parse unsigned long string
-     */
-    private static long parseLong(String str)
-    {
+    /** Parse unsigned long string */
+    private static long parseLong(String str) {
         return parseUnsignedLong(str, 10);
     }
 
     /**
-     * Make the CURRENT file point to the descriptor file with the
-     * specified number.
+     * Make the CURRENT file point to the descriptor file with the specified number.
+     *
      * @throws IOException on any IO exception
      * @throws IllegalArgumentException on invalid descriptorNumber
      */
     public static void setCurrentFile(File databaseDir, long descriptorNumber, Env env)
-        throws IOException
-    {
+            throws IOException {
         String manifest = descriptorFileName(descriptorNumber);
         String temp = tempFileName(descriptorNumber);
 
@@ -206,15 +162,14 @@ public final class Filename
      * @throws IOException on any IO exception
      * @throws IllegalStateException if file does not exist or invalid file content
      */
-    public static String getCurrentFile(File databaseDir, Env env)
-        throws IOException
-    {
+    public static String getCurrentFile(File databaseDir, Env env) throws IOException {
         // Read "CURRENT" file, which contains a pointer to the current manifest file
         File currentFile = databaseDir.child(currentFileName());
         checkState(currentFile.exists(), "CURRENT file does not exist");
 
         String descriptorName = env.readFileToString(currentFile);
-        if (descriptorName.isEmpty() || descriptorName.charAt(descriptorName.length() - 1) != '\n') {
+        if (descriptorName.isEmpty()
+                || descriptorName.charAt(descriptorName.length() - 1) != '\n') {
             throw new IllegalStateException("CURRENT file does not end with newline");
         }
         return descriptorName.substring(0, descriptorName.length() - 1);
@@ -222,56 +177,49 @@ public final class Filename
 
     /**
      * Make a new file name
+     *
      * @param number unsigned number
      * @param suffix file name suffix
      * @return new file name.
      */
-    private static String makeFileName(long number, String suffix)
-    {
+    private static String makeFileName(long number, String suffix) {
         requireNonNull(suffix, "suffix is null");
-        return String.format("%s.%s", Strings.padStart(Long.toUnsignedString(number), 6, '0'), suffix);
+        return String.format(
+                "%s.%s", Strings.padStart(Long.toUnsignedString(number), 6, '0'), suffix);
     }
 
-    private static String removePrefix(String value, String prefix)
-    {
+    private static String removePrefix(String value, String prefix) {
         return value.substring(prefix.length());
     }
 
-    private static String removeSuffix(String value, String suffix)
-    {
+    private static String removeSuffix(String value, String suffix) {
         return value.substring(0, value.length() - suffix.length());
     }
 
-    public static class FileInfo
-    {
+    public static class FileInfo {
         private final FileType fileType;
         private final long fileNumber;
 
-        public FileInfo(FileType fileType)
-        {
+        public FileInfo(FileType fileType) {
             this(fileType, 0);
         }
 
-        public FileInfo(FileType fileType, long fileNumber)
-        {
+        public FileInfo(FileType fileType, long fileNumber) {
             requireNonNull(fileType, "fileType is null");
             this.fileType = fileType;
             this.fileNumber = fileNumber;
         }
 
-        public FileType getFileType()
-        {
+        public FileType getFileType() {
             return fileType;
         }
 
-        public long getFileNumber()
-        {
+        public long getFileNumber() {
             return fileNumber;
         }
 
         @Override
-        public boolean equals(Object o)
-        {
+        public boolean equals(Object o) {
             if (this == o) {
                 return true;
             }
@@ -292,16 +240,14 @@ public final class Filename
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             int result = fileType.hashCode();
             result = 31 * result + (int) (fileNumber ^ (fileNumber >>> 32));
             return result;
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("FileInfo");
             sb.append("{fileType=").append(fileType);

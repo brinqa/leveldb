@@ -18,47 +18,40 @@
 package org.iq80.leveldb.fileenv;
 
 import com.google.common.io.Files;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.env.WritableFile;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Slice;
 
-/**
- * Memory mapped file implementation of {@link WritableFile}.
- */
-class MMWritableFile implements WritableFile
-{
+/** Memory mapped file implementation of {@link WritableFile}. */
+class MMWritableFile implements WritableFile {
     private final File file;
     private final int pageSize;
     private MappedByteBuffer mappedByteBuffer;
     private int fileOffset;
 
-    private MMWritableFile(File file, int pageSize, MappedByteBuffer map)
-    {
+    private MMWritableFile(File file, int pageSize, MappedByteBuffer map) {
         this.file = file;
         this.pageSize = pageSize;
         this.fileOffset = 0;
         this.mappedByteBuffer = map;
     }
 
-    public static WritableFile open(File file, int pageSize) throws IOException
-    {
-        return new MMWritableFile(file, pageSize, Files.map(file, FileChannel.MapMode.READ_WRITE, pageSize));
+    public static WritableFile open(File file, int pageSize) throws IOException {
+        return new MMWritableFile(
+                file, pageSize, Files.map(file, FileChannel.MapMode.READ_WRITE, pageSize));
     }
 
     @Override
-    public void append(Slice data) throws IOException
-    {
+    public void append(Slice data) throws IOException {
         ensureCapacity(data.length());
         data.getBytes(0, mappedByteBuffer);
     }
 
-    private void destroyMappedByteBuffer()
-    {
+    private void destroyMappedByteBuffer() {
         if (mappedByteBuffer != null) {
             fileOffset += mappedByteBuffer.position();
             unmap();
@@ -66,9 +59,7 @@ class MMWritableFile implements WritableFile
         mappedByteBuffer = null;
     }
 
-    private void ensureCapacity(int bytes)
-            throws IOException
-    {
+    private void ensureCapacity(int bytes) throws IOException {
         if (mappedByteBuffer == null) {
             mappedByteBuffer = openNewMap(fileOffset, Math.max(bytes, pageSize));
         }
@@ -81,34 +72,29 @@ class MMWritableFile implements WritableFile
         }
     }
 
-    private MappedByteBuffer openNewMap(int fileOffset, int sizeToGrow) throws IOException
-    {
+    private MappedByteBuffer openNewMap(int fileOffset, int sizeToGrow) throws IOException {
         try (FileChannel cha = openChannel()) {
             return cha.map(FileChannel.MapMode.READ_WRITE, fileOffset, sizeToGrow);
         }
     }
 
-    private FileChannel openChannel() throws FileNotFoundException
-    {
+    private FileChannel openChannel() throws FileNotFoundException {
         return new java.io.RandomAccessFile(file, "rw").getChannel();
     }
 
-    private void unmap()
-    {
+    private void unmap() {
         ByteBufferSupport.unmap(mappedByteBuffer);
     }
 
     @Override
-    public void force() throws IOException
-    {
+    public void force() throws IOException {
         if (mappedByteBuffer != null) {
             mappedByteBuffer.force();
         }
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         destroyMappedByteBuffer();
         try (FileChannel cha = openChannel()) {
             cha.truncate(fileOffset);
@@ -116,10 +102,7 @@ class MMWritableFile implements WritableFile
     }
 
     @Override
-    public String toString()
-    {
-        return "MMWritableFile{" +
-                "file=" + file +
-                '}';
+    public String toString() {
+        return "MMWritableFile{" + "file=" + file + '}';
     }
 }

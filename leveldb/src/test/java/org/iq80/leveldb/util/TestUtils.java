@@ -17,36 +17,30 @@
  */
 package org.iq80.leveldb.util;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
-public final class TestUtils
-{
-    private TestUtils()
-    {
-        //utility
+public final class TestUtils {
+    private TestUtils() {
+        // utility
     }
 
-    public static Slice randomString(Random rnd, int len)
-    {
+    public static Slice randomString(Random rnd, int len) {
         final byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {
-            bytes[i] = (byte) (' ' + rnd.nextInt(95));   // ' ' .. '~'
+            bytes[i] = (byte) (' ' + rnd.nextInt(95)); // ' ' .. '~'
         }
         return new Slice(bytes);
     }
 
-    public static byte[] randomKey(Random rnd, int len)
-    {
+    public static byte[] randomKey(Random rnd, int len) {
         // Make sure to generate a wide variety of characters so we
         // test the boundary conditions for short-key optimizations.
-        byte[] kTestChars = {
-                0, 1, 'a', 'b', 'c', 'd', 'e', (byte) 0xfd, (byte) 0xfe, (byte) 0xff
-        };
+        byte[] kTestChars = {0, 1, 'a', 'b', 'c', 'd', 'e', (byte) 0xfd, (byte) 0xfe, (byte) 0xff};
         byte[] result = new byte[len];
         for (int i = 0; i < len; i++) {
             result[i] = kTestChars[rnd.nextInt(kTestChars.length)];
@@ -54,8 +48,8 @@ public final class TestUtils
         return result;
     }
 
-    public static Slice compressibleString(Random rnd, double compressedFraction, int len) throws IOException
-    {
+    public static Slice compressibleString(Random rnd, double compressedFraction, int len)
+            throws IOException {
         int raw = (int) (len * compressedFraction);
         if (raw < 1) {
             raw = 1;
@@ -71,20 +65,17 @@ public final class TestUtils
         return slice;
     }
 
-    public static String longString(int length, char character)
-    {
+    public static String longString(int length, char character) {
         char[] chars = new char[length];
         Arrays.fill(chars, character);
         return new String(chars);
     }
 
-    public static Slice asciiToSlice(String value)
-    {
+    public static Slice asciiToSlice(String value) {
         return Slices.copiedBuffer(value, US_ASCII);
     }
 
-    public static byte[] asciiToBytes(String value)
-    {
+    public static byte[] asciiToBytes(String value) {
         return asciiToSlice(value).getBytes();
     }
 }

@@ -17,20 +17,17 @@
  */
 package org.iq80.leveldb.table;
 
-public final class CacheKey
-{
+public final class CacheKey {
     private final long id;
     private final BlockHandle key;
 
-    CacheKey(final long id, BlockHandle key)
-    {
+    CacheKey(final long id, BlockHandle key) {
         this.id = id;
         this.key = key;
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -44,8 +41,7 @@ public final class CacheKey
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         int result = (int) (id ^ (id >>> 32));
         result = 31 * result + key.hashCode();
         return result;

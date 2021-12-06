@@ -17,45 +17,38 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.iq80.leveldb.table.BytewiseComparator;
 import org.iq80.leveldb.util.Slice;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
-public class AddBoundaryInputsTest
-{
+public class AddBoundaryInputsTest {
     private List<FileMetaData> levelFiles;
     private List<FileMetaData> compactionFiles;
     private InternalKeyComparator icmp;
 
     @BeforeMethod
-    public void setUp()
-    {
+    public void setUp() {
         levelFiles = new ArrayList<>();
         compactionFiles = new ArrayList<>();
         icmp = new InternalKeyComparator(new BytewiseComparator());
     }
 
     @Test
-    public void testEmptyFileSets() throws Exception
-    {
+    public void testEmptyFileSets() throws Exception {
         VersionSet.addBoundaryInputs(icmp, levelFiles, compactionFiles);
         assertTrue(compactionFiles.isEmpty());
         assertTrue(levelFiles.isEmpty());
     }
 
     @Test
-    public void testEmptyLevelFiles() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 2),
-                        internalKey("100", 1));
+    public void testEmptyLevelFiles() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 2), internalKey("100", 1));
         compactionFiles.add(f1);
 
         VersionSet.addBoundaryInputs(icmp, levelFiles, compactionFiles);
@@ -65,11 +58,8 @@ public class AddBoundaryInputsTest
     }
 
     @Test
-    public void testEmptyCompactionFiles() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 2),
-                        internalKey("100", 1));
+    public void testEmptyCompactionFiles() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 2), internalKey("100", 1));
         levelFiles.add(f1);
 
         VersionSet.addBoundaryInputs(icmp, levelFiles, compactionFiles);
@@ -79,17 +69,10 @@ public class AddBoundaryInputsTest
     }
 
     @Test
-    public void testNoBoundaryFiles() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 2),
-                        internalKey("100", 1));
-        FileMetaData f2 =
-                createFileMetaData(1, internalKey("200", 2),
-                        internalKey("200", 1));
-        FileMetaData f3 =
-                createFileMetaData(1, internalKey("300", 2),
-                        internalKey("300", 1));
+    public void testNoBoundaryFiles() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 2), internalKey("100", 1));
+        FileMetaData f2 = createFileMetaData(1, internalKey("200", 2), internalKey("200", 1));
+        FileMetaData f3 = createFileMetaData(1, internalKey("300", 2), internalKey("300", 1));
 
         levelFiles.add(f3);
         levelFiles.add(f2);
@@ -102,17 +85,10 @@ public class AddBoundaryInputsTest
     }
 
     @Test
-    public void testOneBoundaryFiles() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 3),
-                        internalKey("100", 2));
-        FileMetaData f2 =
-                createFileMetaData(1, internalKey("100", 1),
-                        internalKey("200", 3));
-        FileMetaData f3 =
-                createFileMetaData(1, internalKey("300", 2),
-                        internalKey("300", 1));
+    public void testOneBoundaryFiles() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 3), internalKey("100", 2));
+        FileMetaData f2 = createFileMetaData(1, internalKey("100", 1), internalKey("200", 3));
+        FileMetaData f3 = createFileMetaData(1, internalKey("300", 2), internalKey("300", 1));
 
         levelFiles.add(f3);
         levelFiles.add(f2);
@@ -126,17 +102,10 @@ public class AddBoundaryInputsTest
     }
 
     @Test
-    public void testTwoBoundaryFiles() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 6),
-                        internalKey("100", 5));
-        FileMetaData f2 =
-                createFileMetaData(1, internalKey("100", 2),
-                        internalKey("300", 1));
-        FileMetaData f3 =
-                createFileMetaData(1, internalKey("100", 4),
-                        internalKey("100", 3));
+    public void testTwoBoundaryFiles() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 6), internalKey("100", 5));
+        FileMetaData f2 = createFileMetaData(1, internalKey("100", 2), internalKey("300", 1));
+        FileMetaData f3 = createFileMetaData(1, internalKey("100", 4), internalKey("100", 3));
 
         levelFiles.add(f2);
         levelFiles.add(f3);
@@ -151,20 +120,11 @@ public class AddBoundaryInputsTest
     }
 
     @Test
-    public void testDisjoinFilePointers() throws Exception
-    {
-        FileMetaData f1 =
-                createFileMetaData(1, internalKey("100", 6),
-                        internalKey("100", 5));
-        FileMetaData f2 =
-                createFileMetaData(1, internalKey("100", 6),
-                        internalKey("100", 5));
-        FileMetaData f3 =
-                createFileMetaData(1, internalKey("100", 2),
-                        internalKey("300", 1));
-        FileMetaData f4 =
-                createFileMetaData(1, internalKey("100", 4),
-                        internalKey("100", 3));
+    public void testDisjoinFilePointers() throws Exception {
+        FileMetaData f1 = createFileMetaData(1, internalKey("100", 6), internalKey("100", 5));
+        FileMetaData f2 = createFileMetaData(1, internalKey("100", 6), internalKey("100", 5));
+        FileMetaData f3 = createFileMetaData(1, internalKey("100", 2), internalKey("300", 1));
+        FileMetaData f4 = createFileMetaData(1, internalKey("100", 4), internalKey("100", 3));
 
         levelFiles.add(f2);
         levelFiles.add(f3);
@@ -179,14 +139,12 @@ public class AddBoundaryInputsTest
         assertEquals(compactionFiles.get(2), f3);
     }
 
-    private FileMetaData createFileMetaData(long number, InternalKey smallest,
-                                            InternalKey largest)
-    {
+    private FileMetaData createFileMetaData(
+            long number, InternalKey smallest, InternalKey largest) {
         return new FileMetaData(number, 0, smallest, largest);
     }
 
-    private InternalKey internalKey(String s, int sequenceNumber)
-    {
+    private InternalKey internalKey(String s, int sequenceNumber) {
         return new InternalKey(new Slice(s.getBytes()), sequenceNumber, ValueType.VALUE);
     }
 }

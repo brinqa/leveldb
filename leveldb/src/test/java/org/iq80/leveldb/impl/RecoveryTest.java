@@ -17,40 +17,37 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.Snapshot;
-import org.iq80.leveldb.env.Env;
-import org.iq80.leveldb.env.File;
-import org.iq80.leveldb.fileenv.EnvImpl;
-import org.iq80.leveldb.fileenv.MmapLimiter;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.Slices;
-import org.iq80.leveldb.env.WritableFile;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import org.iq80.leveldb.Options;
+import org.iq80.leveldb.Snapshot;
+import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.fileenv.EnvImpl;
+import org.iq80.leveldb.fileenv.MmapLimiter;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.Slices;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertTrue;
-
-public class RecoveryTest
-{
+public class RecoveryTest {
     private Env env;
     private File dbname;
     private DbImpl db;
 
     @BeforeMethod
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         env = EnvImpl.createEnv(MmapLimiter.newLimiter(0));
         dbname = env.createTempDir("leveldb").child("recovery_test");
         assertTrue(DbImpl.destroyDB(dbname, env), "unable to close/delete previous db correctly");
@@ -58,29 +55,25 @@ public class RecoveryTest
     }
 
     @AfterMethod
-    public void tearDown() throws Exception
-    {
+    public void tearDown() throws Exception {
         close();
         DbImpl.destroyDB(dbname, env);
         dbname.getParentFile().deleteRecursively();
     }
 
-    void close()
-    {
+    void close() {
         if (db != null) {
             db.close();
         }
         db = null;
     }
 
-    void open(Options options) throws IOException
-    {
+    void open(Options options) throws IOException {
         close();
         Options opts = new Options();
         if (options != null) {
             opts = options;
-        }
-        else {
+        } else {
             opts.reuseLogs(true);
             opts.createIfMissing(true);
         }
@@ -88,25 +81,24 @@ public class RecoveryTest
         assertEquals(numLogs(), 1);
     }
 
-    void put(String k, String v)
-    {
+    void put(String k, String v) {
         db.put(k.getBytes(StandardCharsets.UTF_8), v.getBytes(StandardCharsets.UTF_8));
     }
 
-    String get(String k)
-    {
+    String get(String k) {
         return get(k, null);
     }
 
-    String get(String k, Snapshot snapshot)
-    {
+    String get(String k, Snapshot snapshot) {
         byte[] bytes = db.get(k.getBytes(StandardCharsets.UTF_8));
         return bytes == null ? "NOT_FOUND" : new String(bytes);
     }
 
-    File manifestFileName() throws IOException
-    {
-        try (BufferedReader in = Files.newReader(new java.io.File(dbname.child(Filename.currentFileName()).getPath()), StandardCharsets.UTF_8)) {
+    File manifestFileName() throws IOException {
+        try (BufferedReader in =
+                Files.newReader(
+                        new java.io.File(dbname.child(Filename.currentFileName()).getPath()),
+                        StandardCharsets.UTF_8)) {
             String current = CharStreams.toString(in);
             int len = current.length();
             if (len > 0 && current.charAt(len - 1) == '\n') {
@@ -116,13 +108,11 @@ public class RecoveryTest
         }
     }
 
-    File logName(long number)
-    {
+    File logName(long number) {
         return dbname.child(Filename.logFileName(number));
     }
 
-    long deleteLogFiles()
-    {
+    long deleteLogFiles() {
         List<Long> logs = getFiles(Filename.FileType.LOG);
         for (Long log : logs) {
             boolean delete = dbname.child(Filename.logFileName(log)).delete();
@@ -131,13 +121,11 @@ public class RecoveryTest
         return logs.size();
     }
 
-    long firstLogFile()
-    {
+    long firstLogFile() {
         return getFiles(Filename.FileType.LOG).get(0);
     }
 
-    List<Long> getFiles(Filename.FileType t)
-    {
+    List<Long> getFiles(Filename.FileType t) {
         ArrayList<Long> result = new ArrayList<>();
         for (File file : dbname.listFiles()) {
             Filename.FileInfo fileInfo = Filename.parseFileName(file);
@@ -148,29 +136,24 @@ public class RecoveryTest
         return result;
     }
 
-    int numLogs()
-    {
+    int numLogs() {
         return getFiles(Filename.FileType.LOG).size();
     }
 
-    int numTables()
-    {
+    int numTables() {
         return getFiles(Filename.FileType.TABLE).size();
     }
 
-    long fileSize(File fname)
-    {
+    long fileSize(File fname) {
         return fname.length();
     }
 
-    void compactMemTable()
-    {
+    void compactMemTable() {
         db.testCompactMemTable();
     }
 
     // Directly construct a log file that sets key to val.
-    void makeLogFile(long lognum, long seq, Slice key, Slice val) throws IOException
-    {
+    void makeLogFile(long lognum, long seq, Slice key, Slice val) throws IOException {
         org.iq80.leveldb.env.File fname = dbname.child(Filename.logFileName(lognum));
         try (LogWriter writer = Logs.createLogWriter(fname, lognum, env)) {
             WriteBatchImpl batch = new WriteBatchImpl();
@@ -180,8 +163,7 @@ public class RecoveryTest
     }
 
     @Test
-    public void testManifestReused() throws Exception
-    {
+    public void testManifestReused() throws Exception {
         put("foo", "bar");
         close();
         File oldManifest = manifestFileName();
@@ -194,8 +176,7 @@ public class RecoveryTest
     }
 
     @Test
-    public void testLargeManifestCompacted() throws Exception
-    {
+    public void testLargeManifestCompacted() throws Exception {
         put("foo", "bar");
         close();
         File oldManifest = manifestFileName();
@@ -205,7 +186,7 @@ public class RecoveryTest
         long len = fileSize(oldManifest);
         try (WritableFile file = env.newAppendableFile(oldManifest)) {
             file.append(Slices.allocate(3 * 1048576 - ((int) len)));
-            file.force(); //flush
+            file.force(); // flush
         }
 
         open(null);
@@ -220,10 +201,9 @@ public class RecoveryTest
     }
 
     @Test
-    public void testNoLogFiles() throws Exception
-    {
+    public void testNoLogFiles() throws Exception {
         put("foo", "bar");
-        close(); //file are locked in windows, can't delete them fi do not close db.
+        close(); // file are locked in windows, can't delete them fi do not close db.
         assertEquals(deleteLogFiles(), 1);
         open(null);
         assertEquals(get("foo"), "NOT_FOUND");
@@ -232,8 +212,7 @@ public class RecoveryTest
     }
 
     @Test
-    public void testLogFileReuse() throws Exception
-    {
+    public void testLogFileReuse() throws Exception {
         for (int i = 0; i < 2; i++) {
             put("foo", "bar");
             if (i == 0) {
@@ -245,8 +224,7 @@ public class RecoveryTest
             long number = firstLogFile();
             if (i == 0) {
                 assertEquals(fileSize(logName(number)), 0);
-            }
-            else {
+            } else {
                 assertTrue((long) 0 < fileSize(logName(number)));
             }
             open(null);
@@ -261,8 +239,7 @@ public class RecoveryTest
     }
 
     @Test
-    public void testMultipleMemTables() throws Exception
-    {
+    public void testMultipleMemTables() throws Exception {
         // Make a large log.
         int kNum = 1000;
         for (int i = 0; i < kNum; i++) {
@@ -290,8 +267,7 @@ public class RecoveryTest
     }
 
     @Test
-    public void testMultipleLogFiles() throws Exception
-    {
+    public void testMultipleLogFiles() throws Exception {
         put("foo", "bar");
         close();
         assertEquals(numLogs(), 1);
@@ -333,8 +309,7 @@ public class RecoveryTest
         assertEquals(get("hi"), "there");
     }
 
-    private Slice toSlice(String hello)
-    {
+    private Slice toSlice(String hello) {
         return Slices.copiedBuffer(hello, StandardCharsets.UTF_8);
     }
 }

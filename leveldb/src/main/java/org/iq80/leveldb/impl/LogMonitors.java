@@ -19,45 +19,35 @@ package org.iq80.leveldb.impl;
 
 import org.iq80.leveldb.Logger;
 
-public final class LogMonitors
-{
-    public static LogMonitor throwExceptionMonitor()
-    {
-        return new LogMonitor()
-        {
+public final class LogMonitors {
+    public static LogMonitor throwExceptionMonitor() {
+        return new LogMonitor() {
             @Override
-            public void corruption(long bytes, String reason)
-            {
-                throw new RuntimeException(String.format("corruption of %s bytes: %s", bytes, reason));
+            public void corruption(long bytes, String reason) {
+                throw new RuntimeException(
+                        String.format("corruption of %s bytes: %s", bytes, reason));
             }
 
             @Override
-            public void corruption(long bytes, Throwable reason)
-            {
+            public void corruption(long bytes, Throwable reason) {
                 throw new RuntimeException(String.format("corruption of %s bytes", bytes), reason);
             }
         };
     }
 
-    public static LogMonitor logMonitor(Logger logger)
-    {
-        return new LogMonitor()
-        {
+    public static LogMonitor logMonitor(Logger logger) {
+        return new LogMonitor() {
             @Override
-            public void corruption(long bytes, String reason)
-            {
+            public void corruption(long bytes, String reason) {
                 logger.log("corruption of %s bytes: %s", bytes, reason);
             }
 
             @Override
-            public void corruption(long bytes, Throwable reason)
-            {
+            public void corruption(long bytes, Throwable reason) {
                 logger.log("corruption of %s bytes. %s", bytes, reason);
             }
         };
     }
 
-    private LogMonitors()
-    {
-    }
+    private LogMonitors() {}
 }

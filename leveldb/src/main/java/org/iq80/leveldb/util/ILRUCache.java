@@ -20,12 +20,11 @@ package org.iq80.leveldb.util;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-public interface ILRUCache<K, V>
-{
+public interface ILRUCache<K, V> {
     /**
      * Get cached valued by key or load and cache loaded value.
      *
-     * @param key    cache key
+     * @param key cache key
      * @param loader key value loader
      * @return loaded/saved value
      * @throws ExecutionException if load has any exception.
@@ -42,8 +41,6 @@ public interface ILRUCache<K, V>
      */
     V getIfPresent(K key);
 
-    /**
-     * Discards all entries in the cache.
-     */
+    /** Discards all entries in the cache. */
     void invalidateAll();
 }

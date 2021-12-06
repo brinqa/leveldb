@@ -17,34 +17,29 @@
  */
 package org.iq80.leveldb.env;
 
-import org.iq80.leveldb.util.SliceOutput;
-
 import java.io.Closeable;
 import java.io.IOException;
+import org.iq80.leveldb.util.SliceOutput;
 
-public interface SequentialFile extends Closeable
-{
+public interface SequentialFile extends Closeable {
     /**
-     * Skips over and discards <code>n</code> bytes of data from the
-     * input stream.
+     * Skips over and discards <code>n</code> bytes of data from the input stream.
      *
      * @param n the number of bytes to be skipped.
-     * @throws IOException if n is negative, if the stream does not
-     *                     support seek, or if an I/O error occurs.
+     * @throws IOException if n is negative, if the stream does not support seek, or if an I/O error
+     *     occurs.
      */
     void skip(long n) throws IOException;
 
     /**
      * Read up to "atMost" bytes from the file.
      *
-     * @param atMost      the maximum number of bytes to read.
+     * @param atMost the maximum number of bytes to read.
      * @param destination data destination
-     * @return the total number of bytes read into the destination, or
-     * <code>-1</code> if there is no more data because the end of
-     * the stream has been reached.
-     * @throws IOException If the first byte cannot be read for any reason
-     *                     other than end of file, or if the input stream has been closed, or if
-     *                     some other I/O error occurs.
+     * @return the total number of bytes read into the destination, or <code>-1</code> if there is
+     *     no more data because the end of the stream has been reached.
+     * @throws IOException If the first byte cannot be read for any reason other than end of file,
+     *     or if the input stream has been closed, or if some other I/O error occurs.
      */
     int read(int atMost, SliceOutput destination) throws IOException;
 }

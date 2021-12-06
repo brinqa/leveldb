@@ -17,30 +17,27 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.Snapshot;
-
-import java.util.concurrent.locks.ReentrantLock;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.concurrent.locks.ReentrantLock;
+import org.iq80.leveldb.Snapshot;
+
 /**
- * Snapshots are kept in a doubly-linked list in the DB.
- * Each Snapshot corresponds to a particular sequence number.
+ * Snapshots are kept in a doubly-linked list in the DB. Each Snapshot corresponds to a particular
+ * sequence number.
  */
-final class SnapshotList
-{
+final class SnapshotList {
     private final ReentrantLock mutex;
     private final SnapshotNode list;
 
     /**
-     * Snapshot list where all operation are protected by {@ode mutex}.
-     * All {@code mutex} acquisition mut be done externally to ensure sequence order.
+     * Snapshot list where all operation are protected by {@ode mutex}. All {@code mutex}
+     * acquisition mut be done externally to ensure sequence order.
      *
      * @param mutex protect concurrent read/write to this list
      */
-    public SnapshotList(ReentrantLock mutex)
-    {
+    public SnapshotList(ReentrantLock mutex) {
         this.mutex = mutex;
         this.list = new SnapshotNode(0);
         this.list.next = this.list;
@@ -54,8 +51,7 @@ final class SnapshotList
      * @return new a new tracked snapshot for {@code sequence}
      * @throws IllegalStateException if mutex is not held by current thread
      */
-    public Snapshot newSnapshot(long sequence)
-    {
+    public Snapshot newSnapshot(long sequence) {
         checkState(mutex.isHeldByCurrentThread());
         SnapshotNode s = new SnapshotNode(sequence);
         s.next = this.list;
@@ -71,8 +67,7 @@ final class SnapshotList
      * @return Return {@code true} if list is empty
      * @throws IllegalStateException if mutex is not held by current thread
      */
-    public boolean isEmpty()
-    {
+    public boolean isEmpty() {
         checkState(mutex.isHeldByCurrentThread());
         return list.next == list;
     }
@@ -83,8 +78,7 @@ final class SnapshotList
      * @return oldest sequence number
      * @throws IllegalStateException if mutex is not held by current thread or list is empty
      */
-    public long getOldest()
-    {
+    public long getOldest() {
         checkState(mutex.isHeldByCurrentThread());
         checkState(!isEmpty());
         return list.next.number;
@@ -98,33 +92,28 @@ final class SnapshotList
      * @throws IllegalArgumentException if snapshot concrete type does not come from current list
      * @throws IllegalStateException if mutex is not held by current thread
      */
-    public long getSequenceFrom(Snapshot snapshot)
-    {
+    public long getSequenceFrom(Snapshot snapshot) {
         checkArgument(snapshot instanceof SnapshotNode);
         checkState(mutex.isHeldByCurrentThread());
         return ((SnapshotNode) snapshot).number;
     }
 
-    private final class SnapshotNode implements Snapshot
-    {
+    private final class SnapshotNode implements Snapshot {
         private final long number;
         private SnapshotNode next;
         private SnapshotNode prev;
 
-        private SnapshotNode(long number)
-        {
+        private SnapshotNode(long number) {
             this.number = number;
         }
 
         @Override
-        public void close()
-        {
+        public void close() {
             mutex.lock();
             try {
                 this.prev.next = this.next;
                 this.next.prev = this.prev;
-            }
-            finally {
+            } finally {
                 mutex.unlock();
             }
         }

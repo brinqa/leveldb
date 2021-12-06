@@ -17,15 +17,6 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.DynamicSliceOutput;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.SliceInput;
-import org.iq80.leveldb.util.SliceOutput;
-import org.iq80.leveldb.util.Slices;
-
-import java.io.IOException;
-
 import static org.iq80.leveldb.impl.LogChunkType.BAD_CHUNK;
 import static org.iq80.leveldb.impl.LogChunkType.EOF;
 import static org.iq80.leveldb.impl.LogChunkType.LAST;
@@ -37,57 +28,52 @@ import static org.iq80.leveldb.impl.LogConstants.BLOCK_SIZE;
 import static org.iq80.leveldb.impl.LogConstants.HEADER_SIZE;
 import static org.iq80.leveldb.impl.Logs.getChunkChecksum;
 
-public class LogReader
-{
+import java.io.IOException;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.util.DynamicSliceOutput;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.SliceInput;
+import org.iq80.leveldb.util.SliceOutput;
+import org.iq80.leveldb.util.Slices;
+
+public class LogReader {
     private final SequentialFile sequentialFile;
 
     private final LogMonitor monitor;
 
     private final boolean verifyChecksums;
 
-    /**
-     * Offset at which to start looking for the first record to return
-     */
+    /** Offset at which to start looking for the first record to return */
     private final long initialOffset;
+
     private boolean resyncing;
 
-    /**
-     * Have we read to the end of the file?
-     */
+    /** Have we read to the end of the file? */
     private boolean eof;
 
-    /**
-     * Offset of the last record returned by readRecord.
-     */
+    /** Offset of the last record returned by readRecord. */
     private long lastRecordOffset;
 
-    /**
-     * Offset of the first location past the end of buffer.
-     */
+    /** Offset of the first location past the end of buffer. */
     private long endOfBufferOffset;
 
-    /**
-     * Scratch buffer in which the next record is assembled.
-     */
+    /** Scratch buffer in which the next record is assembled. */
     private final DynamicSliceOutput recordScratch = new DynamicSliceOutput(BLOCK_SIZE);
 
-    /**
-     * Scratch buffer for current block.  The currentBlock is sliced off the underlying buffer.
-     */
+    /** Scratch buffer for current block. The currentBlock is sliced off the underlying buffer. */
     private final SliceOutput blockScratch = Slices.allocate(BLOCK_SIZE).output();
 
-    /**
-     * The current block records are being read from.
-     */
+    /** The current block records are being read from. */
     private SliceInput currentBlock = Slices.EMPTY_SLICE.input();
 
-    /**
-     * Current chunk which is sliced from the current block.
-     */
+    /** Current chunk which is sliced from the current block. */
     private Slice currentChunk = Slices.EMPTY_SLICE;
 
-    public LogReader(SequentialFile sequentialFile, LogMonitor monitor, boolean verifyChecksums, long initialOffset)
-    {
+    public LogReader(
+            SequentialFile sequentialFile,
+            LogMonitor monitor,
+            boolean verifyChecksums,
+            long initialOffset) {
         this.sequentialFile = sequentialFile;
         this.monitor = monitor;
         this.verifyChecksums = verifyChecksums;
@@ -95,20 +81,18 @@ public class LogReader
         this.resyncing = initialOffset > 0;
     }
 
-    public long getLastRecordOffset()
-    {
+    public long getLastRecordOffset() {
         return lastRecordOffset;
     }
 
     /**
      * Skips all blocks that are completely before "initial_offset_".
-     * <p/>
-     * Handles reporting corruption
+     *
+     * <p>Handles reporting corruption
      *
      * @return true on success.
      */
-    private boolean skipToInitialBlock()
-    {
+    private boolean skipToInitialBlock() {
         int offsetInBlock = (int) (initialOffset % BLOCK_SIZE);
         long blockStartLocation = initialOffset - offsetInBlock;
 
@@ -123,8 +107,7 @@ public class LogReader
         if (blockStartLocation > 0) {
             try {
                 sequentialFile.skip(blockStartLocation);
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 reportDrop(blockStartLocation, e);
                 return false;
             }
@@ -133,8 +116,7 @@ public class LogReader
         return true;
     }
 
-    public Slice readRecord()
-    {
+    public Slice readRecord() {
         recordScratch.reset();
 
         // advance to the first record, if we haven't already
@@ -154,17 +136,19 @@ public class LogReader
             // ReadPhysicalRecord may have only had an empty trailer remaining in its
             // internal buffer. Calculate the offset of the next physical record now
             // that it has returned, properly accounting for its header size.
-            long physicalRecordOffset = endOfBufferOffset - currentBlock.available() - HEADER_SIZE - currentChunk.length();
+            long physicalRecordOffset =
+                    endOfBufferOffset
+                            - currentBlock.available()
+                            - HEADER_SIZE
+                            - currentChunk.length();
 
             if (resyncing) {
                 if (chunkType == MIDDLE) {
                     continue;
-                }
-                else if (chunkType == LAST) {
+                } else if (chunkType == LAST) {
                     resyncing = false;
                     continue;
-                }
-                else {
+                } else {
                     resyncing = false;
                 }
             }
@@ -193,24 +177,24 @@ public class LogReader
 
                 case MIDDLE:
                     if (!inFragmentedRecord) {
-                        reportCorruption(currentChunk.length(), "missing start of fragmented record(1)");
+                        reportCorruption(
+                                currentChunk.length(), "missing start of fragmented record(1)");
 
                         // clear the scratch and skip this chunk
                         recordScratch.reset();
-                    }
-                    else {
+                    } else {
                         recordScratch.writeBytes(currentChunk);
                     }
                     break;
 
                 case LAST:
                     if (!inFragmentedRecord) {
-                        reportCorruption(currentChunk.length(), "missing start of fragmented record(2)");
+                        reportCorruption(
+                                currentChunk.length(), "missing start of fragmented record(2)");
 
                         // clear the scratch and skip this chunk
                         recordScratch.reset();
-                    }
-                    else {
+                    } else {
                         recordScratch.writeBytes(currentChunk);
                         lastRecordOffset = prospectiveRecordOffset;
                         return recordScratch.slice().copySlice();
@@ -239,7 +223,8 @@ public class LogReader
                     if (inFragmentedRecord) {
                         dropSize += recordScratch.size();
                     }
-                    reportCorruption(dropSize, String.format("Unexpected chunk type %s", chunkType));
+                    reportCorruption(
+                            dropSize, String.format("Unexpected chunk type %s", chunkType));
                     inFragmentedRecord = false;
                     recordScratch.reset();
                     break;
@@ -247,11 +232,8 @@ public class LogReader
         }
     }
 
-    /**
-     * Return type, or one of the preceding special values
-     */
-    private LogChunkType readNextChunk()
-    {
+    /** Return type, or one of the preceding special values */
+    private LogChunkType readNextChunk() {
         // clear the current chunk
         currentChunk = Slices.EMPTY_SLICE;
 
@@ -317,14 +299,14 @@ public class LogReader
         }
 
         // Skip physical record that started before initial_offset_
-        if (endOfBufferOffset - currentBlock.available() - HEADER_SIZE - length <
-                initialOffset) {
+        if (endOfBufferOffset - currentBlock.available() - HEADER_SIZE - length < initialOffset) {
             currentChunk = Slices.EMPTY_SLICE;
             return BAD_CHUNK;
         }
 
         // Skip unknown chunk types
-        // Since this comes last so we the, know it is a valid chunk, and is just a type we don't understand
+        // Since this comes last so we the, know it is a valid chunk, and is just a type we don't
+        // understand
         if (chunkType == UNKNOWN) {
             reportCorruption(length, "unknown record type");
             return BAD_CHUNK;
@@ -333,8 +315,7 @@ public class LogReader
         return chunkType;
     }
 
-    private boolean readNextBlock()
-    {
+    private boolean readNextBlock() {
         if (eof) {
             return false;
         }
@@ -347,7 +328,7 @@ public class LogReader
         while (blockScratch.writableBytes() > 0) {
             try {
                 int bytesRead = sequentialFile.read(blockScratch.writableBytes(), blockScratch);
-                if (bytesRead < 0) { //eof
+                if (bytesRead < 0) { // eof
                     // no more bytes to read
                     eof = true;
                     if (blockScratch.writableBytes() > 0 && readSoFar < HEADER_SIZE) {
@@ -362,36 +343,32 @@ public class LogReader
                 }
                 readSoFar += bytesRead;
                 endOfBufferOffset += bytesRead;
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 currentBlock = Slices.EMPTY_SLICE.input();
                 reportDrop(BLOCK_SIZE, e);
                 eof = true;
                 return false;
             }
-
         }
         currentBlock = blockScratch.slice().input();
         return currentBlock.isReadable();
     }
 
     /**
-     * Reports corruption to the monitor.
-     * The buffer must be updated to remove the dropped bytes prior to invocation.
+     * Reports corruption to the monitor. The buffer must be updated to remove the dropped bytes
+     * prior to invocation.
      */
-    private void reportCorruption(long bytes, String reason)
-    {
+    private void reportCorruption(long bytes, String reason) {
         if (monitor != null) {
             monitor.corruption(bytes, reason);
         }
     }
 
     /**
-     * Reports dropped bytes to the monitor.
-     * The buffer must be updated to remove the dropped bytes prior to invocation.
+     * Reports dropped bytes to the monitor. The buffer must be updated to remove the dropped bytes
+     * prior to invocation.
      */
-    private void reportDrop(long bytes, Throwable reason)
-    {
+    private void reportDrop(long bytes, Throwable reason) {
         if (monitor != null) {
             monitor.corruption(bytes, reason);
         }

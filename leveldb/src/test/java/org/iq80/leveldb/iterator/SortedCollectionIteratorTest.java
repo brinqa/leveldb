@@ -17,11 +17,12 @@
  */
 package org.iq80.leveldb.iterator;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Collections;
@@ -29,25 +30,27 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+public class SortedCollectionIteratorTest {
+    List<Map.Entry<String, String>> sampleEntries1 =
+            Lists.newArrayList(
+                    entry("k1", "v1"),
+                    entry("k2", "v2"),
+                    entry("k3", "v3"),
+                    entry("k3", "v3"),
+                    entry("k4", "v4"),
+                    entry("k5", "v5"),
+                    entry("k7", "v5"));
 
-public class SortedCollectionIteratorTest
-{
-    List<Map.Entry<String, String>> sampleEntries1 = Lists.newArrayList(
-            entry("k1", "v1"), entry("k2", "v2"), entry("k3", "v3"), entry("k3", "v3"), entry("k4", "v4"), entry("k5", "v5"), entry("k7", "v5")
-    );
-
-    protected SeekingIterator<String, String> iterFactory(List<Map.Entry<String, String>> data)
-    {
-        return new SortedCollectionIterator<>(data, Map.Entry::getKey, Map.Entry::getValue, String::compareTo);
+    protected SeekingIterator<String, String> iterFactory(List<Map.Entry<String, String>> data) {
+        return new SortedCollectionIterator<>(
+                data, Map.Entry::getKey, Map.Entry::getValue, String::compareTo);
     }
 
     @Test
-    public void testSeekAfterLast() throws Exception
-    {
+    public void testSeekAfterLast() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.seek("k8"));
         assertTrue(iter.seek("k5"));
@@ -60,14 +63,15 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testForwardScanAfterSeek() throws Exception
-    {
+    public void testForwardScanAfterSeek() throws Exception {
         int count = 0;
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         Iterator<Map.Entry<String, String>> iterator = sampleEntries1.iterator();
         Iterators.advance(iterator, 2);
-        for (boolean valid = iter.seek(sampleEntries1.get(2).getKey()); valid; valid = iter.next()) {
+        for (boolean valid = iter.seek(sampleEntries1.get(2).getKey());
+                valid;
+                valid = iter.next()) {
             assertEntryEquals(iter, iterator.next());
             count++;
         }
@@ -77,8 +81,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testForwardScanAfterSeekFirst() throws Exception
-    {
+    public void testForwardScanAfterSeekFirst() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         validateAll(iter, iter.seekToFirst(), sampleEntries1);
@@ -88,8 +91,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testForwardScan() throws Exception
-    {
+    public void testForwardScan() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         validateAll(iter, iter.next(), sampleEntries1);
@@ -99,8 +101,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testReverseScan() throws Exception
-    {
+    public void testReverseScan() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         assertFalse(iter.prev());
@@ -108,8 +109,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testReverseScanAfterSeekLast() throws Exception
-    {
+    public void testReverseScanAfterSeekLast() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         validateAllReverse(iter, iter.seekToLast(), sampleEntries1);
@@ -121,8 +121,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testReverseScanAfterSeekFirst() throws Exception
-    {
+    public void testReverseScanAfterSeekFirst() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         assertTrue(iter.seekToFirst());
@@ -131,8 +130,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testForwardScanAfterSeekLast() throws Exception
-    {
+    public void testForwardScanAfterSeekLast() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         assertFalse(iter.valid());
         assertTrue(iter.seekToLast());
@@ -141,8 +139,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testEmpty() throws Exception
-    {
+    public void testEmpty() throws Exception {
         {
             SeekingIterator<String, String> iter = iterFactory(Collections.emptyList());
             assertFalse(iter.valid());
@@ -171,8 +168,7 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testReverseAfterLastNext() throws Exception
-    {
+    public void testReverseAfterLastNext() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         validateAll(iter, iter.next(), sampleEntries1);
         validateAllReverse(iter, iter.prev(), sampleEntries1);
@@ -180,16 +176,17 @@ public class SortedCollectionIteratorTest
     }
 
     @Test
-    public void testNextAfterLastPrev() throws Exception
-    {
+    public void testNextAfterLastPrev() throws Exception {
         SeekingIterator<String, String> iter = iterFactory(sampleEntries1);
         validateAllReverse(iter, iter.seekToLast(), sampleEntries1);
         validateAll(iter, iter.next(), sampleEntries1);
         assertEndAndClose(iter);
     }
 
-    private void validateAll(SeekingIterator<String, String> iter, boolean valid1, List<Map.Entry<String, String>> data)
-    {
+    private void validateAll(
+            SeekingIterator<String, String> iter,
+            boolean valid1,
+            List<Map.Entry<String, String>> data) {
         int count = 0;
         Iterator<Map.Entry<String, String>> iterator = data.iterator();
         for (boolean valid = valid1; valid; valid = iter.next()) {
@@ -199,8 +196,10 @@ public class SortedCollectionIteratorTest
         assertEquals(count, data.size());
     }
 
-    private void validateAllReverse(SeekingIterator<String, String> iter, boolean valid1, List<Map.Entry<String, String>> data)
-    {
+    private void validateAllReverse(
+            SeekingIterator<String, String> iter,
+            boolean valid1,
+            List<Map.Entry<String, String>> data) {
         int count = 0;
         Iterator<Map.Entry<String, String>> iterator = Lists.reverse(data).iterator();
         for (boolean valid = valid1; valid; valid = iter.prev()) {
@@ -210,13 +209,12 @@ public class SortedCollectionIteratorTest
         assertEquals(count, data.size());
     }
 
-    private void assertEndAndClose(SeekingIterator<String, String> iter) throws IOException
-    {
+    private void assertEndAndClose(SeekingIterator<String, String> iter) throws IOException {
         assertFalse(iter.valid());
         Assert.assertThrows(NoSuchElementException.class, iter::key);
         Assert.assertThrows(NoSuchElementException.class, iter::value);
         iter.close();
-        //after close, call should not succeed
+        // after close, call should not succeed
         Assert.assertThrows(iter::next);
         Assert.assertThrows(iter::prev);
         Assert.assertThrows(iter::seekToFirst);
@@ -224,8 +222,7 @@ public class SortedCollectionIteratorTest
         Assert.assertThrows(() -> iter.seek("k2"));
     }
 
-    private <K, V> void assertEntryEquals(SeekingIterator<K, V> iter, Map.Entry<K, V> next)
-    {
+    private <K, V> void assertEntryEquals(SeekingIterator<K, V> iter, Map.Entry<K, V> next) {
         assertTrue(iter.valid());
         assertEquals(iter.key(), next.getKey());
         assertEquals(iter.key(), next.getKey());
@@ -233,8 +230,7 @@ public class SortedCollectionIteratorTest
         assertEquals(iter.value(), next.getValue());
     }
 
-    private Map.Entry<String, String> entry(String k, String v)
-    {
+    private Map.Entry<String, String> entry(String k, String v) {
         return new AbstractMap.SimpleEntry<>(k, v);
     }
 }

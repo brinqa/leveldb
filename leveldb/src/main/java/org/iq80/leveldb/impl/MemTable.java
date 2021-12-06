@@ -17,38 +17,32 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.iterator.MemTableIterator;
-import org.iq80.leveldb.util.Slice;
+import static java.util.Objects.requireNonNull;
+import static org.iq80.leveldb.util.SizeOf.SIZE_OF_LONG;
 
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.iq80.leveldb.iterator.MemTableIterator;
+import org.iq80.leveldb.util.Slice;
 
-import static java.util.Objects.requireNonNull;
-import static org.iq80.leveldb.util.SizeOf.SIZE_OF_LONG;
-
-public class MemTable
-{
+public class MemTable {
     private final ConcurrentSkipListMap<InternalKey, Slice> table;
     private final AtomicLong approximateMemoryUsage = new AtomicLong();
 
-    public MemTable(InternalKeyComparator internalKeyComparator)
-    {
+    public MemTable(InternalKeyComparator internalKeyComparator) {
         table = new ConcurrentSkipListMap<>(internalKeyComparator);
     }
 
-    public boolean isEmpty()
-    {
+    public boolean isEmpty() {
         return table.isEmpty();
     }
 
-    public long approximateMemoryUsage()
-    {
+    public long approximateMemoryUsage() {
         return approximateMemoryUsage.get();
     }
 
-    public void add(long sequenceNumber, ValueType valueType, Slice key, Slice value)
-    {
+    public void add(long sequenceNumber, ValueType valueType, Slice key, Slice value) {
         requireNonNull(valueType, "valueType is null");
         requireNonNull(key, "key is null");
         requireNonNull(valueType, "valueType is null");
@@ -59,8 +53,7 @@ public class MemTable
         approximateMemoryUsage.addAndGet(key.length() + SIZE_OF_LONG + value.length());
     }
 
-    public LookupResult get(LookupKey key)
-    {
+    public LookupResult get(LookupKey key) {
         requireNonNull(key, "key is null");
 
         InternalKey internalKey = key.getInternalKey();
@@ -73,16 +66,14 @@ public class MemTable
         if (entryKey.getUserKey().equals(key.getUserKey())) {
             if (entryKey.getValueType() == ValueType.DELETION) {
                 return LookupResult.deleted(key);
-            }
-            else {
+            } else {
                 return LookupResult.ok(key, entry.getValue());
             }
         }
         return null;
     }
 
-    public MemTableIterator iterator()
-    {
+    public MemTableIterator iterator() {
         return new MemTableIterator(table);
     }
 }

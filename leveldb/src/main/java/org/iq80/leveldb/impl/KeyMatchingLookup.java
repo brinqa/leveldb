@@ -18,27 +18,22 @@
 
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.table.KeyValueFunction;
-import org.iq80.leveldb.util.Slice;
-
 import static com.google.common.base.Preconditions.checkState;
 import static org.iq80.leveldb.impl.ValueType.VALUE;
 
-/**
- * @author Honore Vasconcelos
- */
-public class KeyMatchingLookup implements KeyValueFunction<LookupResult>
-{
+import org.iq80.leveldb.table.KeyValueFunction;
+import org.iq80.leveldb.util.Slice;
+
+/** @author Honore Vasconcelos */
+public class KeyMatchingLookup implements KeyValueFunction<LookupResult> {
     private LookupKey key;
 
-    KeyMatchingLookup(LookupKey key)
-    {
+    KeyMatchingLookup(LookupKey key) {
         this.key = key;
     }
 
     @Override
-    public LookupResult apply(Slice internalKey1, Slice value)
-    {
+    public LookupResult apply(Slice internalKey1, Slice value) {
         // parse the key in the block
         checkState(internalKey1 != null, "Corrupt key for %s", key);
 
@@ -48,8 +43,7 @@ public class KeyMatchingLookup implements KeyValueFunction<LookupResult>
         if (key.getUserKey().equals(internalKey.getUserKey())) {
             if (internalKey.getValueType() == ValueType.DELETION) {
                 return LookupResult.deleted(key);
-            }
-            else if (internalKey.getValueType() == VALUE) {
+            } else if (internalKey.getValueType() == VALUE) {
                 return LookupResult.ok(key, value);
             }
         }

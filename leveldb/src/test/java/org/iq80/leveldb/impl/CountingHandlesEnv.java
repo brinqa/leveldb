@@ -17,84 +17,70 @@
  */
 package org.iq80.leveldb.impl;
 
-import org.iq80.leveldb.Logger;
-import org.iq80.leveldb.env.Env;
-import org.iq80.leveldb.env.DbLock;
-import org.iq80.leveldb.env.RandomInputFile;
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.SliceOutput;
-import org.iq80.leveldb.env.WritableFile;
-
-import org.iq80.leveldb.env.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.iq80.leveldb.Logger;
+import org.iq80.leveldb.env.DbLock;
+import org.iq80.leveldb.env.Env;
+import org.iq80.leveldb.env.File;
+import org.iq80.leveldb.env.RandomInputFile;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.env.WritableFile;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.SliceOutput;
 
-/**
- * Environment that count how many handles are currently opened.
- */
-public class CountingHandlesEnv implements Env
-{
+/** Environment that count how many handles are currently opened. */
+public class CountingHandlesEnv implements Env {
     private final Env env;
     private final AtomicInteger counter = new AtomicInteger();
     private final ConcurrentMap<Object, Object> ob = new ConcurrentHashMap<>();
 
-    public CountingHandlesEnv(Env env)
-    {
+    public CountingHandlesEnv(Env env) {
         this.env = env;
     }
 
-    public int getOpenHandles()
-    {
+    public int getOpenHandles() {
         return counter.get();
     }
 
     @Override
-    public long nowMicros()
-    {
+    public long nowMicros() {
         return env.nowMicros();
     }
 
     @Override
-    public File toFile(String filename)
-    {
+    public File toFile(String filename) {
         return env.toFile(filename);
     }
 
     @Override
-    public File createTempDir(String prefix)
-    {
+    public File createTempDir(String prefix) {
         return env.createTempDir(prefix);
     }
 
     @Override
-    public SequentialFile newSequentialFile(File file) throws IOException
-    {
+    public SequentialFile newSequentialFile(File file) throws IOException {
         final SequentialFile sequentialFile = env.newSequentialFile(file);
         counter.incrementAndGet();
-        return new SequentialFile()
-        {
+        return new SequentialFile() {
             boolean closed;
 
             {
                 ob.put(this, this);
             }
 
-            public void skip(long n) throws IOException
-            {
+            public void skip(long n) throws IOException {
                 sequentialFile.skip(n);
             }
 
-            public int read(int atMost, SliceOutput destination) throws IOException
-            {
+            public int read(int atMost, SliceOutput destination) throws IOException {
                 return sequentialFile.read(atMost, destination);
             }
 
-            public void close() throws IOException
-            {
+            public void close() throws IOException {
                 if (!closed) {
                     counter.decrementAndGet();
                     closed = true;
@@ -106,30 +92,25 @@ public class CountingHandlesEnv implements Env
     }
 
     @Override
-    public RandomInputFile newRandomAccessFile(File file) throws IOException
-    {
+    public RandomInputFile newRandomAccessFile(File file) throws IOException {
         final RandomInputFile randomInputFile = env.newRandomAccessFile(file);
         counter.incrementAndGet();
-        return new RandomInputFile()
-        {
+        return new RandomInputFile() {
             boolean closed;
 
             {
                 ob.put(this, this);
             }
 
-            public long size()
-            {
+            public long size() {
                 return randomInputFile.size();
             }
 
-            public ByteBuffer read(long offset, int length) throws IOException
-            {
+            public ByteBuffer read(long offset, int length) throws IOException {
                 return randomInputFile.read(offset, length);
             }
 
-            public void close() throws IOException
-            {
+            public void close() throws IOException {
                 if (!closed) {
                     counter.decrementAndGet();
                     closed = true;
@@ -141,33 +122,27 @@ public class CountingHandlesEnv implements Env
     }
 
     @Override
-    public WritableFile newWritableFile(File file) throws IOException
-    {
+    public WritableFile newWritableFile(File file) throws IOException {
         return getWritableFile(env.newWritableFile(file));
     }
 
     @Override
-    public WritableFile newAppendableFile(File file) throws IOException
-    {
+    public WritableFile newAppendableFile(File file) throws IOException {
         return getWritableFile(env.newAppendableFile(file));
     }
 
     @Override
-    public Logger newLogger(File loggerFile) throws IOException
-    {
+    public Logger newLogger(File loggerFile) throws IOException {
         counter.incrementAndGet();
         Logger logger = env.newLogger(loggerFile);
-        return new Logger()
-        {
+        return new Logger() {
             @Override
-            public void log(String message)
-            {
+            public void log(String message) {
                 logger.log(message);
             }
 
             @Override
-            public void close() throws IOException
-            {
+            public void close() throws IOException {
                 counter.decrementAndGet();
                 logger.close();
             }
@@ -175,34 +150,28 @@ public class CountingHandlesEnv implements Env
     }
 
     @Override
-    public DbLock tryLock(File file) throws IOException
-    {
+    public DbLock tryLock(File file) throws IOException {
         return env.tryLock(file);
     }
 
-    private WritableFile getWritableFile(WritableFile writableFile) throws IOException
-    {
+    private WritableFile getWritableFile(WritableFile writableFile) throws IOException {
         counter.incrementAndGet();
-        return new WritableFile()
-        {
+        return new WritableFile() {
             boolean closed;
 
             {
                 ob.put(this, this);
             }
 
-            public void append(Slice data) throws IOException
-            {
+            public void append(Slice data) throws IOException {
                 writableFile.append(data);
             }
 
-            public void force() throws IOException
-            {
+            public void force() throws IOException {
                 writableFile.force();
             }
 
-            public void close() throws IOException
-            {
+            public void close() throws IOException {
                 if (!closed) {
                     counter.decrementAndGet();
                     closed = true;
@@ -214,14 +183,12 @@ public class CountingHandlesEnv implements Env
     }
 
     @Override
-    public void writeStringToFileSync(File file, String content) throws IOException
-    {
+    public void writeStringToFileSync(File file, String content) throws IOException {
         env.writeStringToFileSync(file, content);
     }
 
     @Override
-    public String readFileToString(File file) throws IOException
-    {
+    public String readFileToString(File file) throws IOException {
         return env.readFileToString(file);
     }
 }

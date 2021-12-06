@@ -17,27 +17,21 @@
  */
 package org.iq80.leveldb;
 
-import org.testng.annotations.Test;
-
 import static org.testng.Assert.assertEquals;
 
-public class OptionsTest
-{
+import org.testng.annotations.Test;
+
+public class OptionsTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testDefaults() throws Exception
-    {
+    public void testDefaults() throws Exception {
         Options.fromOptions(null);
     }
 
     @Test
-    public void testCopy() throws Exception
-    {
+    public void testCopy() throws Exception {
         MyDBComparator comparator = new MyDBComparator();
-        Logger logger = msg -> {
-        };
-        XFilterPolicy filterPolicy = new XFilterPolicy()
-        {
-        };
+        Logger logger = msg -> {};
+        XFilterPolicy filterPolicy = new XFilterPolicy() {};
         Options op = new Options();
         op.createIfMissing(false);
         op.errorIfExists(true);
@@ -71,29 +65,24 @@ public class OptionsTest
         assertEquals(op2.reuseLogs(), true);
     }
 
-    private static class MyDBComparator implements DBComparator
-    {
+    private static class MyDBComparator implements DBComparator {
         @Override
-        public String name()
-        {
+        public String name() {
             return null;
         }
 
         @Override
-        public byte[] findShortestSeparator(byte[] start, byte[] limit)
-        {
+        public byte[] findShortestSeparator(byte[] start, byte[] limit) {
             return new byte[0];
         }
 
         @Override
-        public byte[] findShortSuccessor(byte[] key)
-        {
+        public byte[] findShortSuccessor(byte[] key) {
             return new byte[0];
         }
 
         @Override
-        public int compare(byte[] o1, byte[] o2)
-        {
+        public int compare(byte[] o1, byte[] o2) {
             return 0;
         }
     }

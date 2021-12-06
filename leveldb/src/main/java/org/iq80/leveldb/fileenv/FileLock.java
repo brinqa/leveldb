@@ -17,26 +17,23 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.env.DbLock;
-import org.iq80.leveldb.util.Closeables;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import org.iq80.leveldb.DBException;
+import org.iq80.leveldb.env.DbLock;
+import org.iq80.leveldb.util.Closeables;
 
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-
-class FileLock implements DbLock
-{
+class FileLock implements DbLock {
     private final File lockFile;
     private final FileChannel channel;
     private final java.nio.channels.FileLock lock;
 
-    private FileLock(File lockFile, FileChannel channel, java.nio.channels.FileLock lock)
-    {
+    private FileLock(File lockFile, FileChannel channel, java.nio.channels.FileLock lock) {
         this.lockFile = lockFile;
         this.channel = channel;
         this.lock = lock;
@@ -49,44 +46,40 @@ class FileLock implements DbLock
      * @return releasable db lock
      * @throws IOException If lock is already held or some other I/O error occurs
      */
-    public static FileLock tryLock(File lockFile) throws IOException
-    {
+    public static FileLock tryLock(File lockFile) throws IOException {
         requireNonNull(lockFile, "lockFile is null");
         // open and lock the file
         final FileChannel channel = new RandomAccessFile(lockFile, "rw").getChannel();
         try {
             java.nio.channels.FileLock lock = channel.tryLock();
             if (lock == null) {
-                throw new IOException(format("Unable to acquire lock on '%s'", lockFile.getAbsolutePath()));
+                throw new IOException(
+                        format("Unable to acquire lock on '%s'", lockFile.getAbsolutePath()));
             }
             return new FileLock(lockFile, channel, lock);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Closeables.closeQuietly(channel);
-            throw new IOException(format("Unable to acquire lock on '%s'", lockFile.getAbsolutePath()), e);
+            throw new IOException(
+                    format("Unable to acquire lock on '%s'", lockFile.getAbsolutePath()), e);
         }
     }
 
     @Override
-    public boolean isValid()
-    {
+    public boolean isValid() {
         return lock.isValid();
     }
 
     @Override
-    public void release()
-    {
+    public void release() {
         try (FileChannel closeMe = channel) {
             lock.release();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new DBException(e);
         }
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("DbLock");
         sb.append("{lockFile=").append(lockFile);

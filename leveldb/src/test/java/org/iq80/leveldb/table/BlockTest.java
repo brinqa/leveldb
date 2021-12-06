@@ -17,71 +17,59 @@
  */
 package org.iq80.leveldb.table;
 
-import org.iq80.leveldb.util.Slice;
-import org.iq80.leveldb.util.Slices;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import java.util.Collections;
-import java.util.List;
-
 import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class BlockTest
-{
+import java.util.Collections;
+import java.util.List;
+import org.iq80.leveldb.util.Slice;
+import org.iq80.leveldb.util.Slices;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+public class BlockTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testEmptyBuffer()
-            throws Exception
-    {
+    public void testEmptyBuffer() throws Exception {
         new Block(Slices.EMPTY_SLICE, new BytewiseComparator());
     }
 
     @Test
-    public void testEmptyBlock()
-            throws Exception
-    {
+    public void testEmptyBlock() throws Exception {
         blockTest(Integer.MAX_VALUE);
     }
 
     @Test
-    public void testSingleEntry()
-            throws Exception
-    {
-        blockTest(Integer.MAX_VALUE,
-                BlockHelper.createBlockEntry("name", "dain sundstrom"));
+    public void testSingleEntry() throws Exception {
+        blockTest(Integer.MAX_VALUE, BlockHelper.createBlockEntry("name", "dain sundstrom"));
     }
 
     @Test
-    public void testMultipleEntriesWithNonSharedKey()
-            throws Exception
-    {
-        blockTest(Integer.MAX_VALUE,
+    public void testMultipleEntriesWithNonSharedKey() throws Exception {
+        blockTest(
+                Integer.MAX_VALUE,
                 BlockHelper.createBlockEntry("beer", "Lagunitas IPA"),
                 BlockHelper.createBlockEntry("scotch", "Highland Park"));
     }
 
     @Test
-    public void testMultipleEntriesWithSharedKey()
-            throws Exception
-    {
-        blockTest(Integer.MAX_VALUE,
+    public void testMultipleEntriesWithSharedKey() throws Exception {
+        blockTest(
+                Integer.MAX_VALUE,
                 BlockHelper.createBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
                 BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
                 BlockHelper.createBlockEntry("scotch", "Highland Park"));
     }
 
     @Test
-    public void testMultipleEntriesWithNonSharedKeyAndRestartPositions()
-            throws Exception
-    {
-        List<BlockEntry> entries = asList(
-                BlockHelper.createBlockEntry("ale", "Lagunitas  Little Sumpin’ Sumpin’"),
-                BlockHelper.createBlockEntry("ipa", "Lagunitas IPA"),
-                BlockHelper.createBlockEntry("stout", "Lagunitas Imperial Stout"),
-                BlockHelper.createBlockEntry("strong", "Lagavulin"));
+    public void testMultipleEntriesWithNonSharedKeyAndRestartPositions() throws Exception {
+        List<BlockEntry> entries =
+                asList(
+                        BlockHelper.createBlockEntry("ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                        BlockHelper.createBlockEntry("ipa", "Lagunitas IPA"),
+                        BlockHelper.createBlockEntry("stout", "Lagunitas Imperial Stout"),
+                        BlockHelper.createBlockEntry("strong", "Lagavulin"));
 
         for (int i = 1; i < entries.size(); i++) {
             blockTest(i, entries);
@@ -89,16 +77,16 @@ public class BlockTest
     }
 
     @Test
-    public void testMultipleEntriesWithSharedKeyAndRestartPositions()
-            throws Exception
-    {
-        List<BlockEntry> entries = asList(
-                BlockHelper.createBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
-                BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
-                BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
-                BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
-                BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
-                BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
+    public void testMultipleEntriesWithSharedKeyAndRestartPositions() throws Exception {
+        List<BlockEntry> entries =
+                asList(
+                        BlockHelper.createBlockEntry(
+                                "beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                        BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
+                        BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                        BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
+                        BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
+                        BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
 
         for (int i = 1; i < entries.size(); i++) {
             blockTest(i, entries);
@@ -106,15 +94,16 @@ public class BlockTest
     }
 
     @Test
-    public void testNextPrev()
-    {
-        List<BlockEntry> entries = asList(
-                BlockHelper.createBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
-                BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
-                BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
-                BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
-                BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
-                BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
+    public void testNextPrev() {
+        List<BlockEntry> entries =
+                asList(
+                        BlockHelper.createBlockEntry(
+                                "beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                        BlockHelper.createBlockEntry("beer/ipa", "Lagunitas IPA"),
+                        BlockHelper.createBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                        BlockHelper.createBlockEntry("scotch/light", "Oban 14"),
+                        BlockHelper.createBlockEntry("scotch/medium", "Highland Park"),
+                        BlockHelper.createBlockEntry("scotch/strong", "Lagavulin"));
         Block block = buildBLock(2, entries);
         try (BlockIterator it = block.iterator()) {
             assertTrue(it.next());
@@ -136,27 +125,29 @@ public class BlockTest
         }
     }
 
-    private static BlockEntry entry(BlockIterator it)
-    {
+    private static BlockEntry entry(BlockIterator it) {
         return new BlockEntry(it.key(), it.value());
     }
 
-    private static void blockTest(int blockRestartInterval, BlockEntry... entries)
-    {
+    private static void blockTest(int blockRestartInterval, BlockEntry... entries) {
         blockTest(blockRestartInterval, asList(entries));
     }
 
-    private static Block buildBLock(int blockRestartInterval, List<BlockEntry> entries)
-    {
-        BlockBuilder builder = new BlockBuilder(256, blockRestartInterval, new BytewiseComparator());
+    private static Block buildBLock(int blockRestartInterval, List<BlockEntry> entries) {
+        BlockBuilder builder =
+                new BlockBuilder(256, blockRestartInterval, new BytewiseComparator());
 
         for (BlockEntry entry : entries) {
             builder.add(entry);
         }
 
-        assertEquals(builder.currentSizeEstimate(), BlockHelper.estimateBlockSize(blockRestartInterval, entries));
+        assertEquals(
+                builder.currentSizeEstimate(),
+                BlockHelper.estimateBlockSize(blockRestartInterval, entries));
         Slice blockSlice = builder.finish();
-        assertEquals(builder.currentSizeEstimate(), BlockHelper.estimateBlockSize(blockRestartInterval, entries));
+        assertEquals(
+                builder.currentSizeEstimate(),
+                BlockHelper.estimateBlockSize(blockRestartInterval, entries));
 
         Block block = new Block(blockSlice, new BytewiseComparator());
         assertEquals(block.size(), BlockHelper.estimateBlockSize(blockRestartInterval, entries));
@@ -164,8 +155,7 @@ public class BlockTest
         return block;
     }
 
-    private static void blockTest(int blockRestartInterval, List<BlockEntry> entries)
-    {
+    private static void blockTest(int blockRestartInterval, List<BlockEntry> entries) {
         Block block = buildBLock(blockRestartInterval, entries);
         try (BlockIterator it = block.iterator()) {
             assertTrue(it.next() || entries.isEmpty(), "Next should return validity of iterator");
@@ -175,7 +165,8 @@ public class BlockTest
             BlockHelper.assertSequence(it, entries);
 
             for (BlockEntry entry : entries) {
-                List<BlockEntry> nextEntries = entries.subList(entries.indexOf(entry), entries.size());
+                List<BlockEntry> nextEntries =
+                        entries.subList(entries.indexOf(entry), entries.size());
                 assertEquals(it.seek(entry.getKey()), !nextEntries.isEmpty());
                 BlockHelper.assertSequence(it, nextEntries);
 
@@ -187,14 +178,16 @@ public class BlockTest
                 BlockHelper.assertSequence(it, entries1);
             }
 
-            it.seek(Slices.wrappedBuffer(new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}));
+            it.seek(
+                    Slices.wrappedBuffer(
+                            new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}));
             BlockHelper.assertSequence(it, Collections.<BlockEntry>emptyList());
         }
         BlockIterator iterator = block.iterator();
         iterator.seekToFirst();
         iterator.close();
         assertFalse(iterator.valid());
-        //Should not be possible to use iterator after close
+        // Should not be possible to use iterator after close
         Assert.assertThrows(iterator::next);
         Assert.assertThrows(iterator::key);
         Assert.assertThrows(iterator::value);

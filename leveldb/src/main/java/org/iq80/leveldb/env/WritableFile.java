@@ -17,22 +17,20 @@
  */
 package org.iq80.leveldb.env;
 
-import org.iq80.leveldb.util.Slice;
-
 import java.io.Closeable;
 import java.io.IOException;
+import org.iq80.leveldb.util.Slice;
 
 /**
- * A file abstraction for sequential writing.  The implementation
- * must provide buffering since callers may append small fragments
- * at a time to the file.
+ * A file abstraction for sequential writing. The implementation must provide buffering since
+ * callers may append small fragments at a time to the file.
  *
  * @author Honore Vasconcelos
  */
-public interface WritableFile extends Closeable
-{
+public interface WritableFile extends Closeable {
     /**
      * Append {@code data} to current file position.
+     *
      * @param data data to append
      * @throws IOException on any error accessing file
      */
@@ -40,6 +38,7 @@ public interface WritableFile extends Closeable
 
     /**
      * Force sync bytes to filesystem.
+     *
      * @throws IOException on any error accessing file
      */
     void force() throws IOException;

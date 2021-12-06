@@ -17,85 +17,81 @@
  */
 package org.iq80.leveldb.iterator;
 
-import org.iq80.leveldb.DBIterator;
-
 import java.util.Map;
 import java.util.function.Function;
+import org.iq80.leveldb.DBIterator;
 
-public class SeekingDBIteratorAdapter<K, V> extends ASeekingIterator<K, V>
-{
+public class SeekingDBIteratorAdapter<K, V> extends ASeekingIterator<K, V> {
     private final DBIterator iterator;
     private final Function<K, byte[]> toKey;
     private final Function<byte[], K> key;
     private final Function<byte[], V> value;
     private Map.Entry<byte[], byte[]> entry;
 
-    private SeekingDBIteratorAdapter(DBIterator iterator, Function<K, byte[]> toKey, Function<byte[], K> key, Function<byte[], V> value)
-    {
+    private SeekingDBIteratorAdapter(
+            DBIterator iterator,
+            Function<K, byte[]> toKey,
+            Function<byte[], K> key,
+            Function<byte[], V> value) {
         this.iterator = iterator;
         this.toKey = toKey;
         this.key = key;
         this.value = value;
     }
 
-    public static <K, V> SeekingIterator<K, V> toSeekingIterator(DBIterator iterator, Function<K, byte[]> toKey, Function<byte[], K> key, Function<byte[], V> value)
-    {
+    public static <K, V> SeekingIterator<K, V> toSeekingIterator(
+            DBIterator iterator,
+            Function<K, byte[]> toKey,
+            Function<byte[], K> key,
+            Function<byte[], V> value) {
         return new SeekingDBIteratorAdapter<>(iterator, toKey, key, value);
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         iterator.seekToFirst();
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         iterator.seekToLast();
         entry = iterator.hasPrev() ? iterator.prev() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalSeek(K key)
-    {
+    protected boolean internalSeek(K key) {
         iterator.seek(this.toKey.apply(key));
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         entry = iterator.hasNext() ? iterator.next() : null;
         return entry != null;
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         entry = iterator.hasPrev() ? iterator.prev() : null;
         return entry != null;
     }
 
     @Override
-    protected K internalKey()
-    {
+    protected K internalKey() {
         return key.apply(entry.getKey());
     }
 
     @Override
-    protected V internalValue()
-    {
+    protected V internalValue() {
         return value.apply(entry.getValue());
     }
 
     @Override
-    protected void internalClose()
-    {
+    protected void internalClose() {
         entry = null;
         iterator.close();
     }

@@ -17,6 +17,13 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.iq80.leveldb.impl.Iq80DBFactory.asString;
+import static org.iq80.leveldb.impl.Iq80DBFactory.bytes;
+import static org.testng.Assert.assertTrue;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
@@ -26,33 +33,21 @@ import org.iq80.leveldb.fileenv.FileUtils;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-
-import static org.iq80.leveldb.impl.Iq80DBFactory.asString;
-import static org.iq80.leveldb.impl.Iq80DBFactory.bytes;
-import static org.testng.Assert.assertTrue;
-
 /**
  * Test the implemenation via the org.iq80.leveldb API.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ApiTest
-{
+public class ApiTest {
     private final File databaseDir = FileUtils.createTempDir("leveldb");
 
-    public void assertEquals(byte[] arg1, byte[] arg2)
-    {
+    public void assertEquals(byte[] arg1, byte[] arg2) {
         assertTrue(Arrays.equals(arg1, arg2), asString(arg1) + " != " + asString(arg2));
     }
 
     private final DBFactory factory = Iq80DBFactory.factory;
 
-    File getTestDirectory(String name)
-            throws IOException
-    {
+    File getTestDirectory(String name) throws IOException {
         File rc = new File(databaseDir, name);
         factory.destroy(rc, new Options().createIfMissing(true));
         rc.mkdirs();
@@ -60,9 +55,7 @@ public class ApiTest
     }
 
     @Test
-    public void testCompaction()
-            throws IOException, DBException
-    {
+    public void testCompaction() throws IOException, DBException {
         Options options = new Options().createIfMissing(true).compressionType(CompressionType.NONE);
         File path = getTestDirectory("testCompaction");
         DB db = factory.open(path, options);
@@ -101,8 +94,7 @@ public class ApiTest
     }
 
     @AfterMethod
-    public void tearDown()
-    {
+    public void tearDown() {
         FileUtils.deleteRecursively(databaseDir);
     }
 }

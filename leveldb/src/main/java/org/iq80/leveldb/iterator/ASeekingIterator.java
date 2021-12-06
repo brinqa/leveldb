@@ -17,32 +17,28 @@
  */
 package org.iq80.leveldb.iterator;
 
-import org.iq80.leveldb.DBException;
-
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import org.iq80.leveldb.DBException;
 
 /**
- * Seeking Iterator base implementation that ensure proper state validation before
- * each call and implement shared direction management between iterator implementations.
+ * Seeking Iterator base implementation that ensure proper state validation before each call and
+ * implement shared direction management between iterator implementations.
  *
  * @param <K> type of the key
  * @param <V> type of the value
  */
-public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
-{
+public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V> {
     private static final String RELEASED_EXCEPTION = "Illegal use of iterator after release";
     private Direction direction = Direction.START_OF_ITERATOR;
 
     @Override
-    public final boolean valid()
-    {
+    public final boolean valid() {
         return direction.isValid();
     }
 
     @Override
-    public final boolean seekToFirst()
-    {
+    public final boolean seekToFirst() {
         if (direction == Direction.RELEASED) {
             throw new DBException(RELEASED_EXCEPTION);
         }
@@ -55,8 +51,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final boolean seekToLast()
-    {
+    public final boolean seekToLast() {
         if (direction == Direction.RELEASED) {
             throw new DBException(RELEASED_EXCEPTION);
         }
@@ -69,8 +64,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final boolean seek(K key)
-    {
+    public final boolean seek(K key) {
         if (direction == Direction.RELEASED) {
             throw new DBException(RELEASED_EXCEPTION);
         }
@@ -83,8 +77,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final boolean next()
-    {
+    public final boolean next() {
         switch (direction) {
             case START_OF_ITERATOR:
                 return seekToFirst();
@@ -105,8 +98,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final boolean prev()
-    {
+    public final boolean prev() {
         switch (direction) {
             case RELEASED:
                 throw new DBException(RELEASED_EXCEPTION);
@@ -127,8 +119,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final K key()
-    {
+    public final K key() {
         if (!direction.isValid()) {
             throw new NoSuchElementException();
         }
@@ -136,8 +127,7 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final V value()
-    {
+    public final V value() {
         if (!direction.isValid()) {
             throw new NoSuchElementException();
         }
@@ -145,18 +135,15 @@ public abstract class ASeekingIterator<K, V> implements SeekingIterator<K, V>
     }
 
     @Override
-    public final void close()
-    {
+    public final void close() {
         if (direction != Direction.RELEASED) {
             direction = Direction.RELEASED;
             try {
                 internalClose();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new DBException(e);
             }
-        }
-        else {
+        } else {
             throw new DBException("Releasing iterator more than once");
         }
     }

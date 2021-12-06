@@ -17,19 +17,15 @@
  */
 package org.iq80.leveldb.env;
 
-/**
- * DB lock information
- */
-public interface DbLock
-{
+/** DB lock information */
+public interface DbLock {
     /**
      * Is lock valid and not released
+     *
      * @return true, if acquired
      */
     boolean isValid();
 
-    /**
-     * Release DB lock
-     */
+    /** Release DB lock */
     void release();
 }

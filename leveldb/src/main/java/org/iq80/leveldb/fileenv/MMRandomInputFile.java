@@ -17,30 +17,27 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import com.google.common.io.Files;
-import org.iq80.leveldb.env.RandomInputFile;
+import static java.util.Objects.requireNonNull;
 
+import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
-
-import static java.util.Objects.requireNonNull;
+import org.iq80.leveldb.env.RandomInputFile;
 
 /**
  * Memory mapped filed table.
  *
  * @author Honore Vasconcelos
  */
-class MMRandomInputFile implements RandomInputFile
-{
+class MMRandomInputFile implements RandomInputFile {
     private final String file;
     private final long size;
     private final MappedByteBuffer data;
 
-    private MMRandomInputFile(String file, MappedByteBuffer data, long size)
-    {
+    private MMRandomInputFile(String file, MappedByteBuffer data, long size) {
         this.file = file;
         this.size = size;
         this.data = data;
@@ -48,12 +45,12 @@ class MMRandomInputFile implements RandomInputFile
 
     /**
      * Open file using memory mapped file access.
+     *
      * @param file file to open
      * @return readable file
      * @throws IOException If some other I/O error occurs
      */
-    public static RandomInputFile open(File file) throws IOException
-    {
+    public static RandomInputFile open(File file) throws IOException {
         requireNonNull(file, "file is null");
         MappedByteBuffer map = Files.map(file);
 
@@ -61,35 +58,32 @@ class MMRandomInputFile implements RandomInputFile
     }
 
     @Override
-    public long size()
-    {
+    public long size() {
         return size;
     }
 
     @Override
-    public ByteBuffer read(long offset, int length)
-    {
+    public ByteBuffer read(long offset, int length) {
         int newPosition = (int) (data.position() + offset);
-        return (ByteBuffer) data.duplicate().order(ByteOrder.LITTLE_ENDIAN).clear().limit(newPosition + length).position(newPosition);
+        return (ByteBuffer)
+                data.duplicate()
+                        .order(ByteOrder.LITTLE_ENDIAN)
+                        .clear()
+                        .limit(newPosition + length)
+                        .position(newPosition);
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         try {
             ByteBufferSupport.unmap(data);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new IOException("Unable to unmap file", e);
         }
     }
 
     @Override
-    public String toString()
-    {
-        return "MMTableDataSource{" +
-                "file='" + file + '\'' +
-                ", size=" + size +
-                '}';
+    public String toString() {
+        return "MMTableDataSource{" + "file='" + file + '\'' + ", size=" + size + '}';
     }
 }

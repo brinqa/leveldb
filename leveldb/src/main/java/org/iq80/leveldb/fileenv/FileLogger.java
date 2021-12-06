@@ -17,9 +17,6 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.Logger;
-import org.iq80.leveldb.util.LogMessageFormatter;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -27,49 +24,42 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.util.function.Supplier;
+import org.iq80.leveldb.Logger;
+import org.iq80.leveldb.util.LogMessageFormatter;
 
-class FileLogger
-        implements Logger
-{
+class FileLogger implements Logger {
     private final PrintStream ps;
     private final LogMessageFormatter formatter;
 
-    private FileLogger(PrintStream ps, LogMessageFormatter formatter)
-    {
+    private FileLogger(PrintStream ps, LogMessageFormatter formatter) {
         this.ps = ps;
         this.formatter = formatter;
     }
 
-    public static Logger createLogger(OutputStream outputStream, Supplier<LocalDateTime> clock)
-    {
+    public static Logger createLogger(OutputStream outputStream, Supplier<LocalDateTime> clock) {
         return new FileLogger(new PrintStream(outputStream), new LogMessageFormatter(clock));
     }
 
-    public static Logger createFileLogger(File loggerFile) throws IOException
-    {
+    public static Logger createFileLogger(File loggerFile) throws IOException {
         return createLogger(new FileOutputStream(loggerFile), LocalDateTime::now);
     }
 
     @Override
-    public void log(String template, Object... args)
-    {
+    public void log(String template, Object... args) {
         log2(formatter.format(template, args));
     }
 
     @Override
-    public void log(String message)
-    {
+    public void log(String message) {
         log2(formatter.format(message));
     }
 
-    private void log2(String message)
-    {
+    private void log2(String message) {
         ps.println(message);
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         ps.close();
     }
 }

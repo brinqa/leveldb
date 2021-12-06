@@ -21,15 +21,11 @@ package org.iq80.leveldb.table;
 import com.google.common.cache.Weigher;
 import org.iq80.leveldb.util.Slice;
 
-/**
- * @author Honore Vasconcelos
- */
-public class BlockHandleSliceWeigher implements Weigher<CacheKey, Slice>
-{
+/** @author Honore Vasconcelos */
+public class BlockHandleSliceWeigher implements Weigher<CacheKey, Slice> {
     @Override
-    public int weigh(CacheKey key, Slice value)
-    {
-        //approximate weigher
+    public int weigh(CacheKey key, Slice value) {
+        // approximate weigher
         return 64 + value.getRawArray().length;
     }
 }

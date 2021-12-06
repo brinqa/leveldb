@@ -17,25 +17,21 @@
  */
 package org.iq80.leveldb.memenv;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import org.iq80.leveldb.env.WritableFile;
 import org.iq80.leveldb.util.Slice;
 
-import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-
-class MemWritableFile implements WritableFile
-{
+class MemWritableFile implements WritableFile {
     private final FileState fileState;
     private boolean closed;
 
-    public MemWritableFile(FileState fileState)
-    {
+    public MemWritableFile(FileState fileState) {
         this.fileState = fileState;
     }
 
     @Override
-    public void append(Slice data) throws IOException
-    {
+    public void append(Slice data) throws IOException {
         if (closed) {
             throw new ClosedChannelException();
         }
@@ -43,13 +39,10 @@ class MemWritableFile implements WritableFile
     }
 
     @Override
-    public void force() throws IOException
-    {
-    }
+    public void force() throws IOException {}
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         closed = true;
     }
 }

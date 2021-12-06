@@ -17,38 +17,33 @@
  */
 package org.iq80.leveldb.impl;
 
+import java.util.Comparator;
 import org.iq80.leveldb.table.UserComparator;
 
-import java.util.Comparator;
-
-public class InternalKeyComparator
-        implements Comparator<InternalKey>
-{
+public class InternalKeyComparator implements Comparator<InternalKey> {
     private final UserComparator userComparator;
 
-    public InternalKeyComparator(UserComparator userComparator)
-    {
+    public InternalKeyComparator(UserComparator userComparator) {
         this.userComparator = userComparator;
     }
 
-    public UserComparator getUserComparator()
-    {
+    public UserComparator getUserComparator() {
         return userComparator;
     }
 
-    public String name()
-    {
+    public String name() {
         return this.userComparator.name();
     }
 
     @Override
-    public int compare(InternalKey left, InternalKey right)
-    {
+    public int compare(InternalKey left, InternalKey right) {
         int result = userComparator.compare(left.getUserKey(), right.getUserKey());
         if (result != 0) {
             return result;
         }
 
-        return Long.compare(right.getSequenceNumber(), left.getSequenceNumber()); // reverse sorted version numbers
+        return Long.compare(
+                right.getSequenceNumber(),
+                left.getSequenceNumber()); // reverse sorted version numbers
     }
 }

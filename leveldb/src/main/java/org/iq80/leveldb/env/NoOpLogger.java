@@ -19,17 +19,14 @@ package org.iq80.leveldb.env;
 
 import org.iq80.leveldb.Logger;
 
-public class NoOpLogger implements Logger
-{
+public class NoOpLogger implements Logger {
     @Override
-    public void log(String message)
-    {
+    public void log(String message) {
         /* no op */
     }
 
     @Override
-    public void log(String message, Object... args)
-    {
+    public void log(String message, Object... args) {
         /* no op */
     }
 }

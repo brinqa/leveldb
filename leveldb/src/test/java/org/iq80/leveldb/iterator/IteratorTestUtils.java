@@ -17,54 +17,47 @@
  */
 package org.iq80.leveldb.iterator;
 
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.Map;
 import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.impl.ValueType;
 import org.iq80.leveldb.util.Slice;
 import org.testng.Assert;
 
-import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.Map;
-
-public final class IteratorTestUtils
-{
-    private IteratorTestUtils()
-    {
-        //util
+public final class IteratorTestUtils {
+    private IteratorTestUtils() {
+        // util
     }
 
-    public static InternalIterator asInternalIterator(SeekingIterator<InternalKey, Slice> iterator)
-    {
+    public static InternalIterator asInternalIterator(
+            SeekingIterator<InternalKey, Slice> iterator) {
         return new InternalForwardingIterator(iterator);
     }
 
-    public static SliceIterator asSliceIterator(SeekingIterator<Slice, Slice> iterator)
-    {
+    public static SliceIterator asSliceIterator(SeekingIterator<Slice, Slice> iterator) {
         return new SliceForwardingIterator(iterator);
     }
 
-    public static InternalKey key(String userK, int sequence, ValueType valueType)
-    {
+    public static InternalKey key(String userK, int sequence, ValueType valueType) {
         return new InternalKey(new Slice(userK.getBytes()), sequence, valueType);
     }
 
-    public static <K, V> void assertValidKV(SeekingIterator<K, V> mergingIterator, K internalKey, V value)
-    {
+    public static <K, V> void assertValidKV(
+            SeekingIterator<K, V> mergingIterator, K internalKey, V value) {
         Assert.assertTrue(mergingIterator.valid());
         Assert.assertEquals(mergingIterator.key(), internalKey);
         Assert.assertEquals(mergingIterator.value(), value);
     }
 
-    public static void assertInvalid(boolean op, SeekingIterator it)
-    {
+    public static void assertInvalid(boolean op, SeekingIterator it) {
         Assert.assertFalse(op);
         Assert.assertFalse(it.valid());
         Assert.assertThrows(it::key);
         Assert.assertThrows(it::value);
     }
 
-    public static <K, V> String toString(SeekingIterator<K, V> it)
-    {
+    public static <K, V> String toString(SeekingIterator<K, V> it) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("[");
         while (it.valid()) {
@@ -77,100 +70,83 @@ public final class IteratorTestUtils
         return stringBuilder.append("]").toString();
     }
 
-    public static <K, V> Map.Entry<K, V> entry(SeekingIterator<K, V> it)
-    {
+    public static <K, V> Map.Entry<K, V> entry(SeekingIterator<K, V> it) {
         return new AbstractMap.SimpleEntry<>(it.key(), it.value());
     }
 
     private static class InternalForwardingIterator extends ForwardingIterator<InternalKey, Slice>
-            implements InternalIterator
-    {
+            implements InternalIterator {
         private final SeekingIterator<InternalKey, Slice> iterator;
 
-        InternalForwardingIterator(SeekingIterator<InternalKey, Slice> iterator)
-        {
+        InternalForwardingIterator(SeekingIterator<InternalKey, Slice> iterator) {
             this.iterator = iterator;
         }
 
         @Override
-        protected SeekingIterator<InternalKey, Slice> delegate()
-        {
+        protected SeekingIterator<InternalKey, Slice> delegate() {
             return iterator;
         }
     }
 
     private static class SliceForwardingIterator extends ForwardingIterator<Slice, Slice>
-            implements SliceIterator
-    {
+            implements SliceIterator {
         private final SeekingIterator<Slice, Slice> iterator;
 
-        SliceForwardingIterator(SeekingIterator<Slice, Slice> iterator)
-        {
+        SliceForwardingIterator(SeekingIterator<Slice, Slice> iterator) {
             this.iterator = iterator;
         }
 
         @Override
-        protected SeekingIterator<Slice, Slice> delegate()
-        {
+        protected SeekingIterator<Slice, Slice> delegate() {
             return iterator;
         }
     }
 
-    public abstract static class ForwardingIterator<K, V> implements SeekingIterator<K, V>
-    {
+    public abstract static class ForwardingIterator<K, V> implements SeekingIterator<K, V> {
         protected abstract SeekingIterator<K, V> delegate();
 
         @Override
-        public boolean valid()
-        {
+        public boolean valid() {
             return delegate().valid();
         }
 
         @Override
-        public boolean seekToFirst()
-        {
+        public boolean seekToFirst() {
             return delegate().seekToFirst();
         }
 
         @Override
-        public boolean seekToLast()
-        {
+        public boolean seekToLast() {
             return delegate().seekToLast();
         }
 
         @Override
-        public boolean seek(K key)
-        {
+        public boolean seek(K key) {
             return delegate().seek(key);
         }
 
         @Override
-        public boolean next()
-        {
+        public boolean next() {
             return delegate().next();
         }
 
         @Override
-        public boolean prev()
-        {
+        public boolean prev() {
             return delegate().prev();
         }
 
         @Override
-        public K key()
-        {
+        public K key() {
             return delegate().key();
         }
 
         @Override
-        public V value()
-        {
+        public V value() {
             return delegate().value();
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             delegate().close();
         }
     }

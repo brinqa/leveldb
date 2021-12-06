@@ -17,6 +17,11 @@
  */
 package org.iq80.leveldb.table;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Comparator;
 import org.iq80.leveldb.iterator.ASeekingIterator;
 import org.iq80.leveldb.iterator.SliceIterator;
 import org.iq80.leveldb.util.Slice;
@@ -25,15 +30,7 @@ import org.iq80.leveldb.util.SliceOutput;
 import org.iq80.leveldb.util.Slices;
 import org.iq80.leveldb.util.VariableLengthQuantity;
 
-import java.util.Comparator;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-public final class BlockIterator extends ASeekingIterator<Slice, Slice>
-        implements SliceIterator
-{
+public final class BlockIterator extends ASeekingIterator<Slice, Slice> implements SliceIterator {
     private final SliceInput data;
     private final RestartPositions restartPositions;
     private final Comparator<Slice> comparator;
@@ -43,8 +40,7 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
     private Slice key;
     private Slice value;
 
-    public BlockIterator(Slice data, Slice restartPositions, Comparator<Slice> comparator)
-    {
+    public BlockIterator(Slice data, Slice restartPositions, Comparator<Slice> comparator) {
         requireNonNull(data, "data is null");
         requireNonNull(restartPositions, "restartPositions is null");
         requireNonNull(comparator, "comparator is null");
@@ -52,32 +48,28 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
         this.data = requireNonNull(data.input(), "data input is null");
 
         this.restartPositions = new RestartPositions(restartPositions);
-        checkArgument(this.restartPositions.size() > 0,
-                "At least one restart position is expected");
+        checkArgument(
+                this.restartPositions.size() > 0, "At least one restart position is expected");
         this.comparator = comparator;
     }
 
     @Override
-    protected Slice internalKey()
-    {
+    protected Slice internalKey() {
         return key;
     }
 
     @Override
-    protected Slice internalValue()
-    {
+    protected Slice internalValue() {
         return value;
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         return parseNextKey();
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         // Scan backwards to a restart point before current
         final int original = current;
         while (restartPositions.get(restartIndex) >= original) {
@@ -95,26 +87,21 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
         return valid();
     }
 
-    private void seekToRestartPoint(int index)
-    {
+    private void seekToRestartPoint(int index) {
         this.restartIndex = index;
         this.data.setPosition(restartPositions.get(restartIndex));
         this.key = null;
         this.value = null;
     }
 
-    /**
-     * Repositions the iterator so the beginning of this block.
-     */
+    /** Repositions the iterator so the beginning of this block. */
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         seekToRestartPosition(0);
         return parseNextKey();
     }
 
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         seekToRestartPoint(restartPositions.size() - 1); // we have at lease one restart
         boolean valid;
         do {
@@ -124,15 +111,16 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
     }
 
     /**
-     * Repositions the iterator so the key of the next BlockElement returned greater than or equal to the specified targetKey.
+     * Repositions the iterator so the key of the next BlockElement returned greater than or equal
+     * to the specified targetKey.
      */
     @Override
-    protected boolean internalSeek(Slice targetKey)
-    {
+    protected boolean internalSeek(Slice targetKey) {
         int left = 0;
         int right = restartPositions.size() - 1;
 
-        // binary search restart positions to find the restart position immediately before the targetKey
+        // binary search restart positions to find the restart position immediately before the
+        // targetKey
         while (left < right) {
             int mid = (left + right + 1) / 2;
 
@@ -144,8 +132,7 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
                 // key at mid is smaller than targetKey.  Therefore all restart
                 // blocks before mid are uninteresting.
                 left = mid;
-            }
-            else {
+            } else {
                 // key at mid is greater than or equal to targetKey.  Therefore
                 // all restart blocks at or after mid are uninteresting.
                 right = mid - 1;
@@ -154,7 +141,7 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
 
         // linear search (within restart block) for first key greater than or equal to targetKey
         seekToRestartPosition(left);
-        while (parseNextKey()) { //load this.key
+        while (parseNextKey()) { // load this.key
             if (comparator.compare(key, targetKey) >= 0) {
                 return true;
             }
@@ -165,11 +152,11 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
 
     /**
      * Seeks to and reads the entry at the specified restart position.
-     * <p/>
-     * After this method, nextEntry will contain the next entry to return, and the previousEntry will be null.
+     *
+     * <p>After this method, nextEntry will contain the next entry to return, and the previousEntry
+     * will be null.
      */
-    private void seekToRestartPosition(int restartPosition)
-    {
+    private void seekToRestartPosition(int restartPosition) {
         // seek data readIndex to the beginning of the restart block
         this.restartIndex = restartPosition;
         this.key = null;
@@ -179,26 +166,25 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
         current = offset;
     }
 
-    private Slice readFirstKeyAtRestartPoint()
-    {
-        checkState(VariableLengthQuantity.readVariableLengthInt(data) == 0,
+    private Slice readFirstKeyAtRestartPoint() {
+        checkState(
+                VariableLengthQuantity.readVariableLengthInt(data) == 0,
                 "First restart position can't have a shared ");
         current = data.position();
         int nonSharedKeyLength = VariableLengthQuantity.readVariableLengthInt(data);
-        //data size
+        // data size
         VariableLengthQuantity.readVariableLengthInt(data);
         return data.readSlice(nonSharedKeyLength);
     }
 
     /**
-     * Reads the entry at the current data readIndex.
-     * After this method, data readIndex is positioned at the beginning of the next entry
-     * or at the end of data if there was not a next entry.
+     * Reads the entry at the current data readIndex. After this method, data readIndex is
+     * positioned at the beginning of the next entry or at the end of data if there was not a next
+     * entry.
      *
      * @return true if an entry was read
      */
-    private boolean parseNextKey()
-    {
+    private boolean parseNextKey() {
         current = data.position();
         if (!data.isReadable()) {
             return false;
@@ -213,11 +199,11 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
         if (sharedKeyLength > 0) {
             key = Slices.allocate(sharedKeyLength + nonSharedKeyLength);
             SliceOutput sliceOutput = key.output();
-            checkState(this.key != null, "Entry has a shared key but no previous entry was provided");
+            checkState(
+                    this.key != null, "Entry has a shared key but no previous entry was provided");
             sliceOutput.writeBytes(this.key, 0, sharedKeyLength);
             sliceOutput.writeBytes(data, nonSharedKeyLength);
-        }
-        else {
+        } else {
             key = data.readSlice(nonSharedKeyLength);
         }
         // read value
@@ -229,8 +215,7 @@ public final class BlockIterator extends ASeekingIterator<Slice, Slice>
     }
 
     @Override
-    protected void internalClose()
-    {
-        //na
+    protected void internalClose() {
+        // na
     }
 }

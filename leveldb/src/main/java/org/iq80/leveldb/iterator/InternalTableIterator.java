@@ -17,89 +17,73 @@
  */
 package org.iq80.leveldb.iterator;
 
+import java.io.IOException;
 import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.util.Slice;
 
-import java.io.IOException;
-
-public class InternalTableIterator
-        implements InternalIterator
-{
+public class InternalTableIterator implements InternalIterator {
     private final SliceIterator tableIterator;
     private InternalKey key;
 
-    public InternalTableIterator(SliceIterator tableIterator)
-    {
+    public InternalTableIterator(SliceIterator tableIterator) {
         this.tableIterator = tableIterator;
     }
 
     @Override
-    public boolean valid()
-    {
+    public boolean valid() {
         return tableIterator.valid();
     }
 
     @Override
-    public boolean seekToFirst()
-    {
+    public boolean seekToFirst() {
         this.key = null;
         return tableIterator.seekToFirst();
     }
 
-    public boolean seek(InternalKey targetKey)
-    {
+    public boolean seek(InternalKey targetKey) {
         this.key = null;
         return tableIterator.seek(targetKey.encode());
     }
 
     @Override
-    public boolean seekToLast()
-    {
+    public boolean seekToLast() {
         this.key = null;
         return tableIterator.seekToLast();
     }
 
     @Override
-    public boolean next()
-    {
+    public boolean next() {
         this.key = null;
         return tableIterator.next();
     }
 
     @Override
-    public boolean prev()
-    {
+    public boolean prev() {
         this.key = null;
         return tableIterator.prev();
     }
 
     @Override
-    public InternalKey key()
-    {
+    public InternalKey key() {
         if (key == null) {
-            //cache key decomposition
+            // cache key decomposition
             this.key = new InternalKey(tableIterator.key());
         }
         return this.key;
     }
 
     @Override
-    public Slice value()
-    {
+    public Slice value() {
         return tableIterator.value();
     }
 
     @Override
-    public String toString()
-    {
-        return "InternalTableIterator" +
-                "{fromIterator=" + tableIterator +
-                '}';
+    public String toString() {
+        return "InternalTableIterator" + "{fromIterator=" + tableIterator + '}';
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         this.key = null;
         tableIterator.close();
     }

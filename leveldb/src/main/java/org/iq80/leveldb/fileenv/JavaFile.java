@@ -17,121 +17,103 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.env.File;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.iq80.leveldb.env.File;
 
-public class JavaFile implements File
-{
+public class JavaFile implements File {
     private final java.io.File file;
 
-    private JavaFile(java.io.File file)
-    {
+    private JavaFile(java.io.File file) {
         this.file = file;
     }
 
-    public static JavaFile fromFile(java.io.File path)
-    {
+    public static JavaFile fromFile(java.io.File path) {
         return new JavaFile(path);
     }
 
-    static java.io.File toFile(File file)
-    {
+    static java.io.File toFile(File file) {
         return ((JavaFile) file).file;
     }
 
     @Override
-    public File child(String name)
-    {
+    public File child(String name) {
         return new JavaFile(new java.io.File(file, name));
     }
 
     @Override
-    public boolean mkdirs()
-    {
+    public boolean mkdirs() {
         return file.mkdirs();
     }
 
     @Override
-    public String getName()
-    {
+    public String getName() {
         return file.getName();
     }
 
     @Override
-    public File getParentFile()
-    {
+    public File getParentFile() {
         return new JavaFile(file.getParentFile());
     }
 
     @Override
-    public String getPath()
-    {
+    public String getPath() {
         return file.getAbsolutePath();
     }
 
     @Override
-    public boolean canRead()
-    {
+    public boolean canRead() {
         return file.canRead();
     }
 
     @Override
-    public boolean exists()
-    {
+    public boolean exists() {
         return file.exists();
     }
 
     @Override
-    public boolean isDirectory()
-    {
+    public boolean isDirectory() {
         return file.isDirectory();
     }
 
     @Override
-    public boolean isFile()
-    {
+    public boolean isFile() {
         return file.isFile();
     }
 
     @Override
-    public long length()
-    {
+    public long length() {
         return file.length();
     }
 
     @Override
-    public boolean delete()
-    {
+    public boolean delete() {
         return file.delete();
     }
 
     @Override
-    public List<File> listFiles()
-    {
+    public List<File> listFiles() {
         java.io.File[] values = file.listFiles();
-        return values == null ? Collections.emptyList() : Stream.of(values).map(JavaFile::new).collect(Collectors.toList());
+        return values == null
+                ? Collections.emptyList()
+                : Stream.of(values).map(JavaFile::new).collect(Collectors.toList());
     }
 
     @Override
-    public boolean renameTo(File dest)
-    {
+    public boolean renameTo(File dest) {
         return file.renameTo(((JavaFile) dest).file);
     }
 
     @Override
-    public boolean deleteRecursively()
-    {
+    public boolean deleteRecursively() {
         return FileUtils.deleteRecursively(file);
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -143,14 +125,12 @@ public class JavaFile implements File
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(file);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return String.valueOf(file);
     }
 }

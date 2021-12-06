@@ -18,17 +18,14 @@
 package org.iq80.leveldb.iterator;
 
 import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.Comparator;
 import org.iq80.leveldb.impl.InternalKey;
 import org.iq80.leveldb.impl.ValueType;
 import org.iq80.leveldb.util.Slice;
 
-import java.io.IOException;
-import java.util.Comparator;
-
-//DbIter
-public final class SnapshotSeekingIterator
-        extends ASeekingIterator<Slice, Slice>
-{
+// DbIter
+public final class SnapshotSeekingIterator extends ASeekingIterator<Slice, Slice> {
     private final InternalIterator iterator;
     private final long sequence;
     private final Comparator<Slice> userComparator;
@@ -36,8 +33,11 @@ public final class SnapshotSeekingIterator
     private Slice key;
     private Slice value;
 
-    public SnapshotSeekingIterator(InternalIterator iterator, long sequence, Comparator<Slice> userComparator, IRecordBytesListener listener)
-    {
+    public SnapshotSeekingIterator(
+            InternalIterator iterator,
+            long sequence,
+            Comparator<Slice> userComparator,
+            IRecordBytesListener listener) {
         this.iterator = iterator;
         this.sequence = sequence;
         this.userComparator = userComparator;
@@ -45,32 +45,28 @@ public final class SnapshotSeekingIterator
     }
 
     @Override
-    protected void internalClose() throws IOException
-    {
+    protected void internalClose() throws IOException {
         iterator.close();
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         return iterator.seekToFirst() && findNextUserEntry(false, null);
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         return iterator.seekToLast() && findPrevUserEntry();
     }
 
     @Override
-    protected boolean internalSeek(Slice targetKey)
-    {
-        return iterator.seek(new InternalKey(targetKey, sequence, ValueType.VALUE)) && findNextUserEntry(false, null);
+    protected boolean internalSeek(Slice targetKey) {
+        return iterator.seek(new InternalKey(targetKey, sequence, ValueType.VALUE))
+                && findNextUserEntry(false, null);
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         if (switchDirection) {
             // iterator is pointing just before the entries for this.key(),
             // so advance into the range of entries for this.key() and then
@@ -78,8 +74,7 @@ public final class SnapshotSeekingIterator
             boolean itrValid = iterator.valid();
             if (!itrValid) {
                 itrValid = iterator.seekToFirst();
-            }
-            else {
+            } else {
                 itrValid = iterator.next();
             }
             boolean valid = itrValid ? iterator.next() : iterator.seekToFirst();
@@ -94,8 +89,7 @@ public final class SnapshotSeekingIterator
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         if (switchDirection) {
             Preconditions.checkState(iterator.valid(), "Should be valid");
             do {
@@ -108,13 +102,11 @@ public final class SnapshotSeekingIterator
     }
 
     @Override
-    protected Slice internalKey()
-    {
+    protected Slice internalKey() {
         return key;
     }
 
-    private boolean findPrevUserEntry()
-    {
+    private boolean findPrevUserEntry() {
         ValueType valueType = ValueType.DELETION;
         if (!iterator.valid()) {
             return false;
@@ -122,7 +114,8 @@ public final class SnapshotSeekingIterator
         do {
             InternalKey key = iterator.key();
             if (key.getSequenceNumber() <= sequence) {
-                if (valueType != ValueType.DELETION && userComparator.compare(key.getUserKey(), this.key) < 0) {
+                if (valueType != ValueType.DELETION
+                        && userComparator.compare(key.getUserKey(), this.key) < 0) {
                     // We encountered a non-deleted value in entries for previous keys,
                     return true;
                 }
@@ -130,8 +123,7 @@ public final class SnapshotSeekingIterator
                 if (valueType == ValueType.DELETION) {
                     this.key = null;
                     this.value = null;
-                }
-                else {
+                } else {
                     this.key = key.getUserKey();
                     this.value = iterator.value();
                 }
@@ -141,20 +133,17 @@ public final class SnapshotSeekingIterator
             this.key = null;
             this.value = null;
             return false;
-        }
-        else {
+        } else {
             return true;
         }
     }
 
     @Override
-    protected Slice internalValue()
-    {
+    protected Slice internalValue() {
         return value;
     }
 
-    private boolean findNextUserEntry(boolean skipping, Slice savedKey)
-    {
+    private boolean findNextUserEntry(boolean skipping, Slice savedKey) {
         // Loop until we hit an acceptable entry to yield
         if (!iterator.valid()) {
             return false;
@@ -172,11 +161,9 @@ public final class SnapshotSeekingIterator
                         skipping = true;
                         break;
                     case VALUE:
-                        if (skipping &&
-                                userComparator.compare(ikey.getUserKey(), savedKey) <= 0) {
+                        if (skipping && userComparator.compare(ikey.getUserKey(), savedKey) <= 0) {
                             // Entry hidden
-                        }
-                        else {
+                        } else {
                             this.key = ikey.getUserKey();
                             this.value = value;
                             return true;
@@ -191,16 +178,11 @@ public final class SnapshotSeekingIterator
     }
 
     @Override
-    public String toString()
-    {
-        return "SnapshotSeekingIterator" +
-                "{sequence=" + sequence +
-                ", iterator=" + iterator +
-                '}';
+    public String toString() {
+        return "SnapshotSeekingIterator" + "{sequence=" + sequence + ", iterator=" + iterator + '}';
     }
 
-    public interface IRecordBytesListener
-    {
+    public interface IRecordBytesListener {
         void record(InternalKey internalKey, int bytes);
     }
 }

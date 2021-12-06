@@ -17,34 +17,28 @@
  */
 package org.iq80.leveldb.table;
 
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import org.iq80.leveldb.util.Slice;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * @author Honore Vasconcelos
- */
-public class BloomFilterPolicyTest
-{
+/** @author Honore Vasconcelos */
+public class BloomFilterPolicyTest {
     public static final int BLOOM_BITS = 10;
     private byte[] filter = new byte[0];
     private List<byte[]> keys = new ArrayList<>();
     private BloomFilterPolicy policy = new BloomFilterPolicy(BLOOM_BITS);
 
     @Test
-    public void emptyBloom() throws Exception
-    {
+    public void emptyBloom() throws Exception {
         Assert.assertTrue(!matches("hello"));
         Assert.assertTrue(!matches("world"));
     }
 
     @Test
-    public void smallBloom() throws Exception
-    {
+    public void smallBloom() throws Exception {
         add("hello");
         add("world");
         Assert.assertTrue(matches("hello"), "Key should be found");
@@ -54,8 +48,7 @@ public class BloomFilterPolicyTest
     }
 
     @Test
-    public void testVariableLength() throws Exception
-    {
+    public void testVariableLength() throws Exception {
         // Count number of filters that significantly exceed the false positive rate
         int mediocreFilters = 0;
         int goodFilters = 0;
@@ -76,25 +69,24 @@ public class BloomFilterPolicyTest
 
             // Check false positive rate
             double rate = falsePositiveRate();
-            System.err.print(String.format("False positives: %5.2f%% @ length = %6d ; bytes = %6d\n",
-                    rate * 100.0, length, filter.length));
+            System.err.print(
+                    String.format(
+                            "False positives: %5.2f%% @ length = %6d ; bytes = %6d\n",
+                            rate * 100.0, length, filter.length));
 
-            Assert.assertTrue(rate <= 0.02);   // Must not be over 2%
+            Assert.assertTrue(rate <= 0.02); // Must not be over 2%
             if (rate > 0.0125) {
-                mediocreFilters++;  // Allowed, but not too often
-            }
-            else {
+                mediocreFilters++; // Allowed, but not too often
+            } else {
                 goodFilters++;
             }
         }
-        System.err.print(String.format("Filters: %d good, %d mediocre\n",
-                goodFilters, mediocreFilters));
+        System.err.print(
+                String.format("Filters: %d good, %d mediocre\n", goodFilters, mediocreFilters));
         Assert.assertTrue(mediocreFilters <= goodFilters / 5);
-
     }
 
-    private double falsePositiveRate()
-    {
+    private double falsePositiveRate() {
         int result = 0;
         for (int i = 0; i < 10000; i++) {
             if (matches(intToBytes(i + 1000000000))) {
@@ -104,8 +96,7 @@ public class BloomFilterPolicyTest
         return result / 10000.0;
     }
 
-    private byte[] intToBytes(int value)
-    {
+    private byte[] intToBytes(int value) {
         byte[] buffer = new byte[4];
         buffer[0] = (byte) (value);
         buffer[1] = (byte) (value >>> 8);
@@ -114,54 +105,44 @@ public class BloomFilterPolicyTest
         return buffer;
     }
 
-    private void reset()
-    {
+    private void reset() {
         keys.clear();
         filter = new byte[0];
     }
 
-    private static int nextLength(int length)
-    {
+    private static int nextLength(int length) {
         if (length < 10) {
             length += 1;
-        }
-        else if (length < 100) {
+        } else if (length < 100) {
             length += 10;
-        }
-        else if (length < 1000) {
+        } else if (length < 1000) {
             length += 100;
-        }
-        else {
+        } else {
             length += 1000;
         }
         return length;
     }
 
-    private void add(String hello)
-    {
+    private void add(String hello) {
         keys.add(getBytes(hello));
     }
 
-    private boolean matches(String s)
-    {
+    private boolean matches(String s) {
         return matches(getBytes(s));
     }
 
-    private boolean matches(byte[] s)
-    {
+    private boolean matches(byte[] s) {
         if (!keys.isEmpty()) {
             build();
         }
         return policy.keyMayMatch(new Slice(s), new Slice(filter));
     }
 
-    private byte[] getBytes(String s)
-    {
+    private byte[] getBytes(String s) {
         return s.getBytes(Charset.forName("ISO-8859-1"));
     }
 
-    private void build()
-    {
+    private void build() {
         List<Slice> keySlices = new ArrayList<>();
         for (int i = 0; i < keys.size(); i++) {
             keySlices.add(new Slice(keys.get(i)));

@@ -17,32 +17,27 @@
  */
 package org.iq80.leveldb.fileenv;
 
-import org.iq80.leveldb.env.SequentialFile;
-import org.iq80.leveldb.util.SliceOutput;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import org.iq80.leveldb.env.SequentialFile;
+import org.iq80.leveldb.util.SliceOutput;
 
-import static com.google.common.base.Preconditions.checkState;
-
-class SequentialFileImpl implements SequentialFile
-{
+class SequentialFileImpl implements SequentialFile {
     private final FileInputStream inputStream;
 
-    private SequentialFileImpl(FileInputStream inputStream)
-    {
+    private SequentialFileImpl(FileInputStream inputStream) {
         this.inputStream = inputStream;
     }
 
-    public static SequentialFile open(File file) throws IOException
-    {
+    public static SequentialFile open(File file) throws IOException {
         return new SequentialFileImpl(new FileInputStream(file));
     }
 
     @Override
-    public void skip(long n) throws IOException
-    {
+    public void skip(long n) throws IOException {
         checkState(n >= 0, "n must be positive");
         if (inputStream.skip(n) != n) {
             throw new IOException(inputStream + " as not enough bytes to skip");
@@ -50,14 +45,12 @@ class SequentialFileImpl implements SequentialFile
     }
 
     @Override
-    public int read(int atMost, SliceOutput destination) throws IOException
-    {
+    public int read(int atMost, SliceOutput destination) throws IOException {
         return destination.writeBytes(inputStream, atMost);
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         inputStream.close();
     }
 }

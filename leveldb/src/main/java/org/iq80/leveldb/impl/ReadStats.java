@@ -17,44 +17,35 @@
  */
 package org.iq80.leveldb.impl;
 
-public class ReadStats
-{
+public class ReadStats {
     private int seekFileLevel = -1;
     private FileMetaData seekFile;
 
-    ReadStats()
-    {
-    }
+    ReadStats() {}
 
-    ReadStats(int seekFileLevel, FileMetaData seekFile)
-    {
+    ReadStats(int seekFileLevel, FileMetaData seekFile) {
         this.seekFileLevel = seekFileLevel;
         this.seekFile = seekFile;
     }
 
-    public void clear()
-    {
+    public void clear() {
         seekFileLevel = -1;
         seekFile = null;
     }
 
-    public int getSeekFileLevel()
-    {
+    public int getSeekFileLevel() {
         return seekFileLevel;
     }
 
-    public void setSeekFileLevel(int seekFileLevel)
-    {
+    public void setSeekFileLevel(int seekFileLevel) {
         this.seekFileLevel = seekFileLevel;
     }
 
-    public FileMetaData getSeekFile()
-    {
+    public FileMetaData getSeekFile() {
         return seekFile;
     }
 
-    public void setSeekFile(FileMetaData seekFile)
-    {
+    public void setSeekFile(FileMetaData seekFile) {
         this.seekFile = seekFile;
     }
 }

@@ -17,6 +17,12 @@
  */
 package org.iq80.leveldb.impl;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.fileenv.EnvImpl;
 import org.iq80.leveldb.table.BytewiseComparator;
@@ -25,52 +31,53 @@ import org.iq80.leveldb.util.TestUtils;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
-
-public class VersionSetTest
-{
+public class VersionSetTest {
     private List<FileMetaData> files = new ArrayList<>();
 
     @BeforeMethod
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         files.clear();
     }
 
-    void add(String smallest, String largest,
-             long smallestSeq,
-             long largestSeq)
-    {
-        files.add(new FileMetaData(files.size() + 1, 0, new InternalKey(TestUtils.asciiToSlice(smallest), smallestSeq, ValueType.VALUE), new InternalKey(TestUtils.asciiToSlice(largest), largestSeq, ValueType.VALUE)));
+    void add(String smallest, String largest, long smallestSeq, long largestSeq) {
+        files.add(
+                new FileMetaData(
+                        files.size() + 1,
+                        0,
+                        new InternalKey(
+                                TestUtils.asciiToSlice(smallest), smallestSeq, ValueType.VALUE),
+                        new InternalKey(
+                                TestUtils.asciiToSlice(largest), largestSeq, ValueType.VALUE)));
     }
 
-    int find(String key)
-    {
+    int find(String key) {
         InternalKey target = new InternalKey(TestUtils.asciiToSlice(key), 100, ValueType.VALUE);
         return newLevel().findFile(target);
     }
 
-    private Level newLevel()
-    {
-        InternalKeyComparator internalKeyComparator = new InternalKeyComparator(new BytewiseComparator());
-        return new Level(1, files, new TableCache(EnvImpl.createEnv().toFile("xxxxxxxxxxx"), 0, new BytewiseComparator(), new Options(), EnvImpl.createEnv()), internalKeyComparator);
+    private Level newLevel() {
+        InternalKeyComparator internalKeyComparator =
+                new InternalKeyComparator(new BytewiseComparator());
+        return new Level(
+                1,
+                files,
+                new TableCache(
+                        EnvImpl.createEnv().toFile("xxxxxxxxxxx"),
+                        0,
+                        new BytewiseComparator(),
+                        new Options(),
+                        EnvImpl.createEnv()),
+                internalKeyComparator);
     }
 
-    boolean overlaps(String smallest, String largest)
-    {
+    boolean overlaps(String smallest, String largest) {
         Slice s = smallest != null ? TestUtils.asciiToSlice(smallest) : null;
         Slice l = largest != null ? TestUtils.asciiToSlice(largest) : null;
         return newLevel().someFileOverlapsRange(true, s, l);
     }
 
     @Test
-    public void testEmpty() throws Exception
-    {
+    public void testEmpty() throws Exception {
         assertEquals(find("foo"), 0);
         assertFalse(overlaps("z", "a"));
         assertFalse(overlaps("z", null));
@@ -79,8 +86,7 @@ public class VersionSetTest
     }
 
     @Test
-    public void testSingle() throws Exception
-    {
+    public void testSingle() throws Exception {
         add("p", "q", 100, 100);
         assertEquals(find("a"), 0);
         assertEquals(find("p"), 0);
@@ -111,8 +117,7 @@ public class VersionSetTest
     }
 
     @Test
-    public void testMultiple() throws Exception
-    {
+    public void testMultiple() throws Exception {
         add("150", "200", 100, 100);
         add("200", "250", 100, 100);
         add("300", "350", 100, 100);
@@ -151,8 +156,7 @@ public class VersionSetTest
     }
 
     @Test
-    public void testMultipleNullBoundaries() throws Exception
-    {
+    public void testMultipleNullBoundaries() throws Exception {
         add("150", "200", 100, 100);
         add("200", "250", 100, 100);
         add("300", "350", 100, 100);
@@ -173,8 +177,7 @@ public class VersionSetTest
     }
 
     @Test
-    public void testOverlapSequenceChecks() throws Exception
-    {
+    public void testOverlapSequenceChecks() throws Exception {
         add("200", "200", 5000, 3000);
         assertTrue(!overlaps("199", "199"));
         assertTrue(!overlaps("201", "300"));

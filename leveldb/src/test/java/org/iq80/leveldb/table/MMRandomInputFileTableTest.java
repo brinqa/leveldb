@@ -21,13 +21,10 @@ import org.iq80.leveldb.env.Env;
 import org.iq80.leveldb.fileenv.EnvImpl;
 import org.iq80.leveldb.fileenv.MmapLimiter;
 
-public class MMRandomInputFileTableTest
-        extends TableTest
-{
+public class MMRandomInputFileTableTest extends TableTest {
     @Override
-    protected Env getEnv()
-    {
-        //force MMap files
+    protected Env getEnv() {
+        // force MMap files
         return EnvImpl.createEnv(MmapLimiter.newLimiter(1000));
     }
 }

@@ -17,33 +17,29 @@
  */
 package org.iq80.leveldb.iterator;
 
-import org.iq80.leveldb.DBException;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.Function;
+import org.iq80.leveldb.DBException;
 
-/**
- * Equivalent to TwoLevelIterator int google leveldb
- */
-class TwoLevelIterator<T, K, V>
-        extends ASeekingIterator<K, V>
-{
+/** Equivalent to TwoLevelIterator int google leveldb */
+class TwoLevelIterator<T, K, V> extends ASeekingIterator<K, V> {
     private final Function<T, SeekingIterator<K, V>> blockFunction;
     private Closeable closeableResources;
     private SeekingIterator<K, T> indexIterator;
     private SeekingIterator<K, V> current;
 
-    TwoLevelIterator(SeekingIterator<K, T> indexIterator, Function<T, SeekingIterator<K, V>> blockFunction, Closeable closeableResources)
-    {
+    TwoLevelIterator(
+            SeekingIterator<K, T> indexIterator,
+            Function<T, SeekingIterator<K, V>> blockFunction,
+            Closeable closeableResources) {
         this.indexIterator = indexIterator;
         this.blockFunction = blockFunction;
         this.closeableResources = closeableResources;
     }
 
     @Override
-    protected boolean internalSeekToFirst()
-    {
+    protected boolean internalSeekToFirst() {
         if (initDataBlock(indexIterator.seekToFirst()) && current.seekToFirst()) {
             return true;
         }
@@ -51,8 +47,7 @@ class TwoLevelIterator<T, K, V>
     }
 
     @Override
-    protected boolean internalSeek(K targetKey)
-    {
+    protected boolean internalSeek(K targetKey) {
         // seek the index to the block containing the key
         // if indexIterator does not have a next, it mean the key does not exist in this iterator
         if (initDataBlock(indexIterator.seek(targetKey)) && current.seek(targetKey)) {
@@ -62,8 +57,7 @@ class TwoLevelIterator<T, K, V>
     }
 
     @Override
-    protected boolean internalSeekToLast()
-    {
+    protected boolean internalSeekToLast() {
         if (!indexIterator.seekToLast()) {
             closeAndResetCurrent();
             return false;
@@ -75,31 +69,26 @@ class TwoLevelIterator<T, K, V>
     }
 
     @Override
-    protected boolean internalNext(boolean switchDirection)
-    {
+    protected boolean internalNext(boolean switchDirection) {
         return current.next() || skipEmptyDataBlocksForward();
     }
 
     @Override
-    protected boolean internalPrev(boolean switchDirection)
-    {
+    protected boolean internalPrev(boolean switchDirection) {
         return current.prev() || skipEmptyDataBlocksBackward();
     }
 
     @Override
-    protected K internalKey()
-    {
+    protected K internalKey() {
         return current.key();
     }
 
     @Override
-    protected V internalValue()
-    {
+    protected V internalValue() {
         return current.value();
     }
 
-    private boolean skipEmptyDataBlocksForward()
-    {
+    private boolean skipEmptyDataBlocksForward() {
         while (current == null || !current.valid()) {
             if (!indexIterator.valid()) {
                 closeAndResetCurrent();
@@ -112,8 +101,7 @@ class TwoLevelIterator<T, K, V>
         return true;
     }
 
-    private boolean skipEmptyDataBlocksBackward()
-    {
+    private boolean skipEmptyDataBlocksBackward() {
         while (current == null || !current.valid()) {
             if (!indexIterator.valid()) {
                 closeAndResetCurrent();
@@ -126,37 +114,35 @@ class TwoLevelIterator<T, K, V>
         return true;
     }
 
-    private boolean initDataBlock(boolean valid)
-    {
+    private boolean initDataBlock(boolean valid) {
         closeAndResetCurrent();
         if (valid) {
             // seek the current iterator to the key
             T blockHandle = indexIterator.value();
             current = blockFunction.apply(blockHandle);
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
     @Override
-    public String toString()
-    {
-        return "TwoLevelIterator{" +
-                "blockFunction=" + blockFunction +
-                ", indexIterator=" + indexIterator +
-                ", current=" + current +
-                '}';
+    public String toString() {
+        return "TwoLevelIterator{"
+                + "blockFunction="
+                + blockFunction
+                + ", indexIterator="
+                + indexIterator
+                + ", current="
+                + current
+                + '}';
     }
 
-    private void closeAndResetCurrent()
-    {
+    private void closeAndResetCurrent() {
         if (current != null) {
             try {
                 current.close();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new DBException(e);
             }
         }
@@ -164,15 +150,13 @@ class TwoLevelIterator<T, K, V>
     }
 
     @Override
-    public void internalClose() throws IOException
-    {
+    public void internalClose() throws IOException {
         assert closeableResources != null : "Unexpected multiple calls to close() method";
         try {
             closeAndResetCurrent();
             this.indexIterator.close();
             this.indexIterator = null;
-        }
-        finally {
+        } finally {
             closeableResources.close();
             closeableResources = null;
         }

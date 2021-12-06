@@ -17,39 +17,37 @@
  */
 package org.iq80.leveldb.table;
 
-import org.iq80.leveldb.util.Slice;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkPositionIndex;
 import static java.util.Objects.requireNonNull;
 import static org.iq80.leveldb.util.SizeOf.SIZE_OF_INT;
 
-final class RestartPositions
-{
+import org.iq80.leveldb.util.Slice;
+
+final class RestartPositions {
     private final Slice restartPositions;
     private final int size;
 
-    RestartPositions(Slice restartPositions)
-    {
+    RestartPositions(Slice restartPositions) {
         requireNonNull(restartPositions, "restartPositions is null");
-        checkArgument(restartPositions.length() % SIZE_OF_INT == 0, "restartPositions.readableBytes() must be a multiple of %s", SIZE_OF_INT);
+        checkArgument(
+                restartPositions.length() % SIZE_OF_INT == 0,
+                "restartPositions.readableBytes() must be a multiple of %s",
+                SIZE_OF_INT);
         this.restartPositions = restartPositions;
         this.size = restartPositions.length() / SIZE_OF_INT;
     }
 
-    public int get(int index)
-    {
+    public int get(int index) {
         checkPositionIndex(index, size, "index out of range");
         return restartPositions.getInt(index * SIZE_OF_INT);
     }
 
-    public boolean isEmpty()
-    {
+    public boolean isEmpty() {
         return size == 0;
     }
 
-    public int size()
-    {
+    public int size() {
         return size;
     }
 }

@@ -17,7 +17,18 @@
  */
 package org.iq80.leveldb.memenv;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.internal.junit.ArrayAsserts.assertArrayEquals;
+
 import com.google.common.collect.Lists;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.env.DbLock;
 import org.iq80.leveldb.env.Env;
@@ -33,29 +44,14 @@ import org.iq80.leveldb.util.Slices;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.internal.junit.ArrayAsserts.assertArrayEquals;
-
-public class MemEnvTest
-{
+public class MemEnvTest {
     @Test
-    public void testNewFineName()
-    {
+    public void testNewFineName() {
         Env env = MemEnv.createEnv();
         testUnexisting(env);
     }
 
-    private void testUnexisting(Env env)
-    {
+    private void testUnexisting(Env env) {
         File file = env.toFile("/roo/doNotExist");
         assertEquals(file.getName(), "doNotExist");
         assertEquals(file.getPath(), "/roo/doNotExist");
@@ -66,8 +62,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testCantBeFileAndDir()
-    {
+    public void testCantBeFileAndDir() {
         File file = MemEnv.createEnv().toFile("/a/b");
         assertFalse(file.isFile());
         assertFalse(file.isDirectory());
@@ -81,8 +76,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testCantCreateFileIfDirDoesNotExist()
-    {
+    public void testCantCreateFileIfDirDoesNotExist() {
         Env env = MemEnv.createEnv();
         File abc = env.createTempDir("abc");
         File child = abc.child("a").child("b");
@@ -90,8 +84,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testTreeIsolated() throws IOException
-    {
+    public void testTreeIsolated() throws IOException {
         Env env = MemEnv.createEnv();
         File abc = env.toFile("/dir");
         assertTrue(abc.mkdirs());
@@ -99,7 +92,7 @@ public class MemEnvTest
         File child1 = abc.child("c").child("b");
         child.mkdirs();
         child1.mkdirs();
-        //write content on both trees
+        // write content on both trees
         // /dir/a/b/c
         // /dir/c/c/c
         env.writeStringToFileSync(child.child("c"), "content2");
@@ -113,21 +106,22 @@ public class MemEnvTest
         assertEquals(env.readFileToString(env.toFile("/dir/a/b/c")), "content2");
         assertEquals(env.readFileToString(env.toFile("/dir/c/b/c")), "content1");
 
-        //delete one of the trees
+        // delete one of the trees
         env.toFile("/dir/a").deleteRecursively();
         assertEquals(abc.listFiles().size(), 1);
 
         // unable to read delete file content
-        Assert.assertThrows(IOException.class, () -> env.readFileToString(env.toFile("/dir/a/b/c")));
+        Assert.assertThrows(
+                IOException.class, () -> env.readFileToString(env.toFile("/dir/a/b/c")));
 
-        //can still access non deleted file content
+        // can still access non deleted file content
         assertEquals(env.readFileToString(env.toFile("/dir/c/b/c")), "content1");
-        assertEquals(abc.child("a").child("b").child("c").getParentFile(), abc.child("a").child("b"));
+        assertEquals(
+                abc.child("a").child("b").child("c").getParentFile(), abc.child("a").child("b"));
     }
 
     @Test
-    public void testTempDir() throws IOException
-    {
+    public void testTempDir() throws IOException {
         Env env = MemEnv.createEnv();
         File file = env.createTempDir("prefixme");
         assertTrue(file.isDirectory());
@@ -150,8 +144,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testBasic() throws IOException
-    {
+    public void testBasic() throws IOException {
         Env env = MemEnv.createEnv();
         File file = env.toFile("/dir");
         assertTrue(file.mkdirs());
@@ -213,8 +206,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testMkdirs()
-    {
+    public void testMkdirs() {
         Env env = MemEnv.createEnv();
         File dir = env.toFile("/dir");
         assertFalse(dir.isDirectory());
@@ -223,8 +215,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testReadWrite() throws IOException
-    {
+    public void testReadWrite() throws IOException {
         Env env = MemEnv.createEnv();
         File dir = env.toFile("/dir");
         assertTrue(dir.mkdirs());
@@ -241,7 +232,7 @@ public class MemEnvTest
         assertEquals(readSeq(sequentialFile, 1000), slice("world"));
         assertEquals(readSeq(sequentialFile, 1000), slice(""));
         sequentialFile.skip(100);
-        assertEquals(readSeq(sequentialFile, 1000), slice(""));  // Try to skip past end of file.
+        assertEquals(readSeq(sequentialFile, 1000), slice("")); // Try to skip past end of file.
         sequentialFile.close();
 
         // Random reads.
@@ -255,30 +246,26 @@ public class MemEnvTest
         randomInputFile.close();
     }
 
-    private Slice readSeq(SequentialFile sequentialFile, int atMost) throws IOException
-    {
+    private Slice readSeq(SequentialFile sequentialFile, int atMost) throws IOException {
         DynamicSliceOutput dynamicSliceOutput = new DynamicSliceOutput(atMost * 2);
         int read = sequentialFile.read(atMost, dynamicSliceOutput);
         Slice slice = dynamicSliceOutput.slice();
         if (read != -1) {
             assertEquals(read, slice.length());
-        }
-        else {
+        } else {
             assertEquals(slice.length(), 0);
         }
         return slice;
     }
 
     @Test(expectedExceptions = IOException.class)
-    public void testDbLockOnInvalidPath() throws IOException
-    {
+    public void testDbLockOnInvalidPath() throws IOException {
         Env env = MemEnv.createEnv();
         env.tryLock(env.toFile("/dir/a"));
     }
 
     @Test
-    public void testDbLock() throws IOException
-    {
+    public void testDbLock() throws IOException {
         Env env = MemEnv.createEnv();
         File lockFile = env.toFile("/dir/a");
         assertTrue(lockFile.getParentFile().mkdirs());
@@ -289,8 +276,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testMisc() throws IOException
-    {
+    public void testMisc() throws IOException {
         Env env = MemEnv.createEnv();
         File test = env.createTempDir("test");
         assertFalse(test.getName().isEmpty());
@@ -302,8 +288,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testLargeFiles() throws IOException
-    {
+    public void testLargeFiles() throws IOException {
         int writeSize = 300 * 1024;
         DynamicSliceOutput dynamicSliceOutput = new DynamicSliceOutput(2 * writeSize);
         for (int i = 0; i < writeSize; i++) {
@@ -332,8 +317,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testOverwriteOpenFile() throws IOException
-    {
+    public void testOverwriteOpenFile() throws IOException {
         Env env = MemEnv.createEnv();
         String writeData = "Write #1 data";
         File prefix = env.createTempDir("prefix");
@@ -350,8 +334,7 @@ public class MemEnvTest
     }
 
     @Test
-    public void testDbTest() throws IOException
-    {
+    public void testDbTest() throws IOException {
         Options options1 = new Options();
         options1.createIfMissing(true);
         Env env = MemEnv.createEnv();
@@ -382,15 +365,13 @@ public class MemEnvTest
         }
     }
 
-    private Slice slice(ByteBuffer read)
-    {
+    private Slice slice(ByteBuffer read) {
         byte[] dst = new byte[read.remaining()];
         read.get(dst);
         return Slices.wrappedBuffer(dst);
     }
 
-    private static Slice slice(String value)
-    {
+    private static Slice slice(String value) {
         return Slices.copiedBuffer(value, UTF_8);
     }
 }

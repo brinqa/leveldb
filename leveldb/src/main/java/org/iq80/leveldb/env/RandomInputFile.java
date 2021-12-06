@@ -26,15 +26,14 @@ import java.nio.ByteBuffer;
  *
  * @author Honore Vasconcelos
  */
-public interface RandomInputFile extends Closeable
-{
-    /**
-     * Source size
-     */
+public interface RandomInputFile extends Closeable {
+    /** Source size */
     long size();
 
     /**
-     * Read {@code length} bytes from source from {@code source} starting at {@code offset} position.
+     * Read {@code length} bytes from source from {@code source} starting at {@code offset}
+     * position.
+     *
      * @param offset position for read start
      * @param length length of the bytes to read
      * @return read only view of the data.

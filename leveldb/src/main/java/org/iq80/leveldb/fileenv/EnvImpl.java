@@ -17,76 +17,66 @@
  */
 package org.iq80.leveldb.fileenv;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.common.io.Files;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
+import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.env.DbLock;
 import org.iq80.leveldb.env.Env;
 import org.iq80.leveldb.env.File;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.env.NoOpLogger;
 import org.iq80.leveldb.env.RandomInputFile;
 import org.iq80.leveldb.env.SequentialFile;
 import org.iq80.leveldb.env.WritableFile;
 import org.iq80.leveldb.util.Slice;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-public class EnvImpl implements Env
-{
+public class EnvImpl implements Env {
     private static final int PAGE_SIZE = 1024 * 1024;
     private final MmapLimiter mmapLimiter;
 
-    private EnvImpl(MmapLimiter mmapLimiter)
-    {
+    private EnvImpl(MmapLimiter mmapLimiter) {
         this.mmapLimiter = mmapLimiter;
     }
 
-    public static Env createEnv()
-    {
+    public static Env createEnv() {
         return new EnvImpl(MmapLimiter.defaultLimiter());
     }
 
-    public static Env createEnv(MmapLimiter mmapLimiter)
-    {
+    public static Env createEnv(MmapLimiter mmapLimiter) {
         return new EnvImpl(mmapLimiter);
     }
 
     @Override
-    public long nowMicros()
-    {
+    public long nowMicros() {
         return TimeUnit.NANOSECONDS.toMicros(System.nanoTime());
     }
 
     @Override
-    public File toFile(String filename)
-    {
+    public File toFile(String filename) {
         return JavaFile.fromFile(new java.io.File(filename));
     }
 
     @Override
-    public File createTempDir(String prefix)
-    {
+    public File createTempDir(String prefix) {
         return JavaFile.fromFile(FileUtils.createTempDir(prefix));
     }
 
     @Override
-    public SequentialFile newSequentialFile(File file) throws IOException
-    {
+    public SequentialFile newSequentialFile(File file) throws IOException {
         return SequentialFileImpl.open(JavaFile.toFile(file));
     }
 
     @Override
-    public RandomInputFile newRandomAccessFile(File file) throws IOException
-    {
+    public RandomInputFile newRandomAccessFile(File file) throws IOException {
         if (mmapLimiter.acquire()) {
             try {
-                return new DelegateRandomInputFile(mmapLimiter, MMRandomInputFile.open(JavaFile.toFile(file)));
-            }
-            catch (IOException e) {
+                return new DelegateRandomInputFile(
+                        mmapLimiter, MMRandomInputFile.open(JavaFile.toFile(file)));
+            } catch (IOException e) {
                 mmapLimiter.release();
                 throw e;
             }
@@ -95,13 +85,12 @@ public class EnvImpl implements Env
     }
 
     @Override
-    public WritableFile newWritableFile(File file) throws IOException
-    {
+    public WritableFile newWritableFile(File file) throws IOException {
         if (mmapLimiter.acquire()) {
             try {
-                return new DelegateWritableFile(mmapLimiter, MMWritableFile.open(JavaFile.toFile(file), PAGE_SIZE));
-            }
-            catch (IOException e) {
+                return new DelegateWritableFile(
+                        mmapLimiter, MMWritableFile.open(JavaFile.toFile(file), PAGE_SIZE));
+            } catch (IOException e) {
                 mmapLimiter.release();
                 throw e;
             }
@@ -110,14 +99,12 @@ public class EnvImpl implements Env
     }
 
     @Override
-    public WritableFile newAppendableFile(File file) throws IOException
-    {
+    public WritableFile newAppendableFile(File file) throws IOException {
         return UnbufferedWritableFile.open(JavaFile.toFile(file), true);
     }
 
     @Override
-    public void writeStringToFileSync(File file, String content) throws IOException
-    {
+    public void writeStringToFileSync(File file, String content) throws IOException {
         try (FileOutputStream stream = new FileOutputStream(JavaFile.toFile(file))) {
             stream.write(content.getBytes(UTF_8));
             stream.flush();
@@ -126,15 +113,13 @@ public class EnvImpl implements Env
     }
 
     @Override
-    public String readFileToString(File file) throws IOException
-    {
+    public String readFileToString(File file) throws IOException {
         return Files.asCharSource(JavaFile.toFile(file), UTF_8).read();
     }
 
     @Override
-    public Logger newLogger(File loggerFile) throws IOException
-    {
-        return new NoOpLogger(); //different that native but avoid for ever growing log file
+    public Logger newLogger(File loggerFile) throws IOException {
+        return new NoOpLogger(); // different that native but avoid for ever growing log file
     }
 
     /**
@@ -145,76 +130,63 @@ public class EnvImpl implements Env
      * @throws IOException If lock is already held or some other I/O error occurs
      */
     @Override
-    public DbLock tryLock(File file) throws IOException
-    {
+    public DbLock tryLock(File file) throws IOException {
         return FileLock.tryLock(JavaFile.toFile(file));
     }
 
-    private static class DelegateRandomInputFile implements RandomInputFile
-    {
+    private static class DelegateRandomInputFile implements RandomInputFile {
         private final MmapLimiter mmapLimiter;
         private final RandomInputFile open;
 
-        DelegateRandomInputFile(MmapLimiter mmapLimiter, RandomInputFile open)
-        {
+        DelegateRandomInputFile(MmapLimiter mmapLimiter, RandomInputFile open) {
             this.mmapLimiter = mmapLimiter;
             this.open = open;
         }
 
         @Override
-        public long size()
-        {
+        public long size() {
             return open.size();
         }
 
         @Override
-        public ByteBuffer read(long offset, int length) throws IOException
-        {
+        public ByteBuffer read(long offset, int length) throws IOException {
             return open.read(offset, length);
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             try {
                 open.close();
-            }
-            finally {
+            } finally {
                 mmapLimiter.release();
             }
         }
     }
 
-    private static class DelegateWritableFile implements WritableFile
-    {
+    private static class DelegateWritableFile implements WritableFile {
         private final MmapLimiter mmapLimiter;
         private final WritableFile open;
 
-        DelegateWritableFile(MmapLimiter mmapLimiter, WritableFile open)
-        {
+        DelegateWritableFile(MmapLimiter mmapLimiter, WritableFile open) {
             this.mmapLimiter = mmapLimiter;
             this.open = open;
         }
 
         @Override
-        public void append(Slice data) throws IOException
-        {
+        public void append(Slice data) throws IOException {
             open.append(data);
         }
 
         @Override
-        public void force() throws IOException
-        {
+        public void force() throws IOException {
             open.force();
         }
 
         @Override
-        public void close() throws IOException
-        {
+        public void close() throws IOException {
             try {
                 open.close();
-            }
-            finally {
+            } finally {
                 mmapLimiter.release();
             }
         }
