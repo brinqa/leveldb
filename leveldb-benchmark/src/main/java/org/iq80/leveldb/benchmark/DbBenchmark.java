@@ -609,7 +609,7 @@ public class DbBenchmark {
             return;
         }
 
-        ByteBuffer compressedBuffer = ByteBuffer.allocateDirect(compressedLength);
+        ByteBuffer compressedBuffer = ByteBuffer.allocate(compressedLength);
         compressedBuffer.put(compressedOutput, 0, compressedLength);
 
         long bytes = 0;

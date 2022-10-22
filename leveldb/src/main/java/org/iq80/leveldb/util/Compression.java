@@ -33,7 +33,7 @@ public final class Compression {
         byte[] rawLen = new byte[SIZE_OF_INT];
         compressed.get(rawLen, 0, SIZE_OF_INT);
         int uncompressedLen = ByteArrayUtils.readInt(rawLen, 0);
-        ByteBuffer ret = ByteBuffer.allocateDirect(uncompressedLen);
+        ByteBuffer ret = ByteBuffer.allocate(uncompressedLen);
         factory.fastDecompressor().decompress(compressed, ret);
         ret.flip();
         return ret;

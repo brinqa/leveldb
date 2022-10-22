@@ -455,6 +455,11 @@ public class DbImpl implements DB {
         return null;
     }
 
+    @Override
+    public long getApproxMemoryUsage() {
+        return 0;
+    }
+
     private void deleteObsoleteFiles() {
         checkState(mutex.isHeldByCurrentThread());
         if (backgroundException != null) {
@@ -896,6 +901,7 @@ public class DbImpl implements DB {
                 WriteBatchInternal ready = writers.peekFirst();
                 writers.pollFirst();
                 if (ready != w) {
+                    assert ready != null;
                     ready.error = error;
                     ready.done = true;
                     ready.signal();
@@ -1105,13 +1111,9 @@ public class DbImpl implements DB {
     }
 
     private long getSnapshot(ReadOptions options) {
-        long snapshot;
-        if (options.snapshot() != null) {
-            snapshot = snapshots.getSequenceFrom(options.snapshot());
-        } else {
-            snapshot = versions.getLastSequence();
-        }
-        return snapshot;
+        return (options.snapshot() != null)
+                ? snapshots.getSequenceFrom(options.snapshot())
+                : versions.getLastSequence();
     }
 
     private void makeRoomForWrite(boolean force) {
@@ -1919,4 +1921,27 @@ public class DbImpl implements DB {
     public String toString() {
         return this.getClass().getName() + "{" + databaseDir + "}";
     }
+
+    //    @Override
+    //    public Stats getStats() {
+    //        final StringBuilder stringBuilder = new StringBuilder();
+    //        stringBuilder.append("                               Compactions\n");
+    //        stringBuilder.append("Level  Files Size(MB) Time(sec) Read(MB) Write(MB)\n");
+    //        stringBuilder.append("--------------------------------------------------\n");
+    //        for (int level = 0; level < DbConstants.NUM_LEVELS; level++) {
+    //            int files = versions.numberOfFilesInLevel(level);
+    //            if (stats[level].micros > 0 || files > 0) {
+    //                stringBuilder.append(
+    //                    String.format(
+    //                        "%3d %8d %8.0f %9.0f %8.0f %9.0f%n",
+    //                        level,
+    //                        files,
+    //                        versions.numberOfBytesInLevel(level) / 1048576.0,
+    //                        stats[level].micros / 1e6,
+    //                        stats[level].bytesRead / 1048576.0,
+    //                        stats[level].bytesWritten / 1048576.0));
+    //            }
+    //        }
+    //        return stringBuilder.toString();
+    //    }
 }

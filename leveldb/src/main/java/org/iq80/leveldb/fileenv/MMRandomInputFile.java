@@ -76,7 +76,7 @@ class MMRandomInputFile implements RandomInputFile {
     @Override
     public void close() throws IOException {
         try {
-            ByteBufferSupport.unmap(data);
+            data.force();
         } catch (Exception e) {
             throw new IOException("Unable to unmap file", e);
         }

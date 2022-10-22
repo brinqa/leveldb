@@ -33,12 +33,12 @@
             <version>${lz4.version}</version>
         </dependency>
 
+        <!-- for testing -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
 
-        <!-- for testing -->
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>

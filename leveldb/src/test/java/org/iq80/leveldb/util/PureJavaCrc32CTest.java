@@ -20,7 +20,7 @@ package org.iq80.leveldb.util;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.iq80.leveldb.util.PureJavaCrc32C.mask;
 import static org.iq80.leveldb.util.PureJavaCrc32C.unmask;
-import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -34,10 +34,10 @@ import org.testng.annotations.Test;
 
 public class PureJavaCrc32CTest {
     private static final IntFunction<ByteBuffer> DIRECT_LE =
-            cap -> ByteBuffer.allocateDirect(cap).order(ByteOrder.LITTLE_ENDIAN);
+            cap -> ByteBuffer.allocate(cap).order(ByteOrder.LITTLE_ENDIAN);
     private static final IntFunction<ByteBuffer> DIRECT_BE =
-            cap -> ByteBuffer.allocateDirect(cap).order(ByteOrder.BIG_ENDIAN);
-    private static final IntFunction<ByteBuffer> HEAP = cap -> ByteBuffer.allocate(cap);
+            cap -> ByteBuffer.allocate(cap).order(ByteOrder.BIG_ENDIAN);
+    private static final IntFunction<ByteBuffer> HEAP = ByteBuffer::allocate;
 
     @Test(dataProvider = "crcs")
     public void testStandardResults(int expectedCrc, byte[] data) {
@@ -109,18 +109,14 @@ public class PureJavaCrc32CTest {
 
     @Test
     public void testProducesDifferentCrcs() throws UnsupportedEncodingException {
-        assertFalse(computeCrc("a".getBytes(US_ASCII)) == computeCrc("foo".getBytes(US_ASCII)));
+        assertNotEquals(computeCrc("foo".getBytes(US_ASCII)), computeCrc("a".getBytes(US_ASCII)));
     }
 
     @Test
     public void testProducesDifferentCrcs2() throws UnsupportedEncodingException {
-        assertFalse(
-                computeCrc(fillBuffer("a".getBytes(US_ASCII), ByteBuffer.allocateDirect(10), 0))
-                        == computeCrc(
-                                fillBuffer(
-                                        "foo".getBytes(US_ASCII),
-                                        ByteBuffer.allocateDirect(10),
-                                        0)));
+        assertNotEquals(
+                computeCrc(fillBuffer("foo".getBytes(US_ASCII), ByteBuffer.allocate(10), 0)),
+                computeCrc(fillBuffer("a".getBytes(US_ASCII), ByteBuffer.allocate(10), 0)));
     }
 
     @Test
@@ -144,23 +140,15 @@ public class PureJavaCrc32CTest {
     }
 
     @Test
-    public void testComposesDirectBuffers() throws UnsupportedEncodingException {
-        PureJavaCrc32C crc = new PureJavaCrc32C();
-        crc.update(fillBuffer("hello ".getBytes(US_ASCII), ByteBuffer.allocateDirect(6), 0));
-        crc.update(fillBuffer("world".getBytes(US_ASCII), ByteBuffer.allocateDirect(5), 0));
-
-        assertEquals(crc.getIntValue(), computeCrc("hello world".getBytes(US_ASCII)));
-    }
-
-    @Test
     public void testMask() throws UnsupportedEncodingException {
         PureJavaCrc32C crc = new PureJavaCrc32C();
         crc.update("foo".getBytes(US_ASCII), 0, 3);
 
         assertEquals(crc.getMaskedValue(), mask(crc.getIntValue()));
-        assertFalse(crc.getIntValue() == crc.getMaskedValue(), "crc should not match masked crc");
-        assertFalse(
-                crc.getIntValue() == mask(crc.getMaskedValue()),
+        assertNotEquals(crc.getMaskedValue(), crc.getIntValue(), "crc should not match masked crc");
+        assertNotEquals(
+                mask(crc.getMaskedValue()),
+                crc.getIntValue(),
                 "crc should not match double masked crc");
         assertEquals(crc.getIntValue(), unmask(crc.getMaskedValue()));
         assertEquals(crc.getIntValue(), unmask(unmask(mask(crc.getMaskedValue()))));
