@@ -896,6 +896,7 @@ public class DbImpl implements DB {
                 WriteBatchInternal ready = writers.peekFirst();
                 writers.pollFirst();
                 if (ready != w) {
+                    assert ready != null;
                     ready.error = error;
                     ready.done = true;
                     ready.signal();
@@ -1105,13 +1106,9 @@ public class DbImpl implements DB {
     }
 
     private long getSnapshot(ReadOptions options) {
-        long snapshot;
-        if (options.snapshot() != null) {
-            snapshot = snapshots.getSequenceFrom(options.snapshot());
-        } else {
-            snapshot = versions.getLastSequence();
-        }
-        return snapshot;
+        return (options.snapshot() != null)
+                ? snapshots.getSequenceFrom(options.snapshot())
+                : versions.getLastSequence();
     }
 
     private void makeRoomForWrite(boolean force) {

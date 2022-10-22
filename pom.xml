@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>113</version>
+        <version>130</version>
     </parent>
 
     <groupId>com.brinqa</groupId>
@@ -129,14 +129,6 @@
                             <style>AOSP</style>
                         </googleJavaFormat>
                     </java>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.3.0</version>
-                <configuration>
-                    <repoToken>${converallstoken}</repoToken>
                 </configuration>
             </plugin>
             <plugin>

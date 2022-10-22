@@ -54,7 +54,6 @@ class MMWritableFile implements WritableFile {
     private void destroyMappedByteBuffer() {
         if (mappedByteBuffer != null) {
             fileOffset += mappedByteBuffer.position();
-            unmap();
         }
         mappedByteBuffer = null;
     }
@@ -66,7 +65,6 @@ class MMWritableFile implements WritableFile {
         if (mappedByteBuffer.remaining() < bytes) {
             // remap
             fileOffset += mappedByteBuffer.position();
-            unmap();
             int sizeToGrow = Math.max(bytes, pageSize);
             mappedByteBuffer = openNewMap(fileOffset, sizeToGrow);
         }
@@ -80,10 +78,6 @@ class MMWritableFile implements WritableFile {
 
     private FileChannel openChannel() throws FileNotFoundException {
         return new java.io.RandomAccessFile(file, "rw").getChannel();
-    }
-
-    private void unmap() {
-        ByteBufferSupport.unmap(mappedByteBuffer);
     }
 
     @Override
