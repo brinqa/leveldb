@@ -26,12 +26,13 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
-import com.google.common.collect.Iterables;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import org.iq80.leveldb.iterator.SeekingIterator;
 import org.iq80.leveldb.util.Slice;
 import org.iq80.leveldb.util.Slices;
@@ -74,7 +75,8 @@ public final class BlockHelper {
             assertEntryEquals(entry(seekingIterator), entry);
             valid = next.apply(seekingIterator);
         }
-        assertFalse(valid && !Iterables.isEmpty(entries), "Last method should have return false");
+        Stream<? extends Entry<K, V>> stream = StreamSupport.stream(entries.spliterator(), false);
+        assertFalse(valid && stream.findAny().isPresent(), "Last method should have return false");
         assertFalse(seekingIterator.valid());
 
         assertFalse(next.apply(seekingIterator), "expected no more elements");

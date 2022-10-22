@@ -33,12 +33,12 @@
             <version>${lz4.version}</version>
         </dependency>
 
-        <!-- for testing -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
 
+        <!-- for testing -->
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
@@ -55,7 +55,7 @@
         <dependency>
             <groupId>org.fusesource.leveldbjni</groupId>
             <artifactId>leveldbjni</artifactId>
-            <version>1.1</version>
+            <version>1.8</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
