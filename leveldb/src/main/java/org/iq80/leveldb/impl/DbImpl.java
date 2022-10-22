@@ -455,11 +455,6 @@ public class DbImpl implements DB {
         return null;
     }
 
-    @Override
-    public long getApproxMemoryUsage() {
-        return 0;
-    }
-
     private void deleteObsoleteFiles() {
         checkState(mutex.isHeldByCurrentThread());
         if (backgroundException != null) {

@@ -154,9 +154,6 @@ public interface DB extends Iterable<Map.Entry<byte[], byte[]>>, Closeable {
      */
     String getProperty(String name);
 
-    /** @return describes all the sstables that make up the db contents. */
-    long getApproxMemoryUsage();
-
     /**
      * Suspends any background compaction threads. This methods returns once the background
      * compactions are suspended.
