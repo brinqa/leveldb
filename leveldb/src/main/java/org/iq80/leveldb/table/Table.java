@@ -35,6 +35,7 @@ import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.env.RandomInputFile;
+import org.iq80.leveldb.fileenv.ByteBufferSupport;
 import org.iq80.leveldb.iterator.SeekingIterators;
 import org.iq80.leveldb.iterator.SliceIterator;
 import org.iq80.leveldb.util.Compression;
@@ -199,11 +200,14 @@ public final class Table implements Closeable {
 
         content.position(position);
         content.limit(limit - BlockTrailer.ENCODED_LENGTH);
-        ByteBuffer scratch =
+
+        // uncompress the buffer
+        final ByteBuffer scratch =
                 (blockTrailer.getCompressionType() == CompressionType.LZ4)
-                        ? Compression.uncompress(content)
+                        ? Compression.uncompress(content) // on heap should clean
                         : content;
-        return Slices.avoidCopiedBuffer(scratch);
+        // for safety copy the buffer
+        return Slices.copiedBuffer(scratch);
     }
 
     public <T> T internalGet(ReadOptions options, Slice key, KeyValueFunction<T> keyValueFunction) {
