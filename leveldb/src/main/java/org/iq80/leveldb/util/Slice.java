@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 
 /** Little Endian slice of a byte array. */
 public final class Slice implements Comparable<Slice> {
@@ -171,14 +170,14 @@ public final class Slice implements Comparable<Slice> {
     }
 
     public byte[] getBytes(int index, int length) {
-        index += offset;
-        if (index == 0) {
-            return Arrays.copyOf(data, length);
-        } else {
-            byte[] value = new byte[length];
-            System.arraycopy(data, index, value, 0, length);
-            return value;
+        checkPositionIndexes(index, index + length, this.length);
+        if (length == 0 && this.data.length == 0) {
+            return data; // zero size array is immutable
         }
+        index += offset;
+        byte[] value = new byte[length];
+        System.arraycopy(data, index, value, 0, length);
+        return value;
     }
 
     /**
@@ -331,12 +330,7 @@ public final class Slice implements Comparable<Slice> {
      * this buffer does not affect each other at all.
      */
     public Slice copySlice(int index, int length) {
-        checkPositionIndexes(index, index + length, this.length);
-
-        index += offset;
-        byte[] copiedArray = new byte[length];
-        System.arraycopy(data, index, copiedArray, 0, length);
-        return new Slice(copiedArray);
+        return new Slice(copyBytes(index, length));
     }
 
     public byte[] copyBytes() {

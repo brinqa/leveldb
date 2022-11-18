@@ -35,7 +35,6 @@ import org.iq80.leveldb.CompressionType;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.env.RandomInputFile;
-import org.iq80.leveldb.fileenv.ByteBufferSupport;
 import org.iq80.leveldb.iterator.SeekingIterators;
 import org.iq80.leveldb.iterator.SliceIterator;
 import org.iq80.leveldb.util.Compression;

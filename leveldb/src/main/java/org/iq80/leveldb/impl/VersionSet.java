@@ -700,6 +700,7 @@ public class VersionSet {
         InternalKey largest = range.getValue();
 
         List<FileMetaData> levelUpInputs = getOverlappingInputs(level + 1, smallest, largest);
+        addBoundaryInputs(internalKeyComparator, current.getFiles(level + 1), levelUpInputs);
 
         // Get entire range covered by compaction
         range = getRange(levelInputs, levelUpInputs);
@@ -722,6 +723,7 @@ public class VersionSet {
                 InternalKey newLimit = range.getValue();
 
                 List<FileMetaData> expanded1 = getOverlappingInputs(level + 1, newStart, newLimit);
+                addBoundaryInputs(internalKeyComparator, current.getFiles(level + 1), expanded1);
                 if (expanded1.size() == levelUpInputs.size()) {
                     options.logger()
                             .log(
@@ -1021,12 +1023,12 @@ public class VersionSet {
 
             @Override
             public String toString() {
-                final StringBuilder sb = new StringBuilder();
-                sb.append("LevelState");
-                sb.append("{addedFiles=").append(addedFiles);
-                sb.append(", deletedFiles=").append(deletedFiles);
-                sb.append('}');
-                return sb.toString();
+                return "LevelState"
+                        + "{addedFiles="
+                        + addedFiles
+                        + ", deletedFiles="
+                        + deletedFiles
+                        + '}';
             }
         }
     }

@@ -89,11 +89,7 @@ public class InternalKey {
         if (!Objects.equals(userKey, that.userKey)) {
             return false;
         }
-        if (valueType != that.valueType) {
-            return false;
-        }
-
-        return true;
+        return valueType == that.valueType;
     }
 
     private int hash;
@@ -130,5 +126,16 @@ public class InternalKey {
     /** Return the size in bytes used by current internal key */
     public int size() {
         return userKey.length() + SIZE_OF_LONG;
+    }
+
+    /**
+     * If user key refer to partial view of data, create a new InternalKey with only relevant bytes
+     * and enable the other to be garbage collected.
+     */
+    public InternalKey compact() {
+        if (userKey.length() != userKey.getRawArray().length) {
+            return new InternalKey(userKey.copySlice(), sequenceNumber, valueType);
+        }
+        return this;
     }
 }

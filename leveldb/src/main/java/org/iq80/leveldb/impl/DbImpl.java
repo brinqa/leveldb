@@ -1468,9 +1468,13 @@ public class DbImpl implements DB {
         checkArgument(outputNumber != 0);
 
         long currentEntries = compactionState.builder.getEntryCount();
-        compactionState.builder.finish();
-
-        long currentBytes = compactionState.builder.getFileSize();
+        long currentBytes = 0;
+        try {
+            compactionState.builder.finish();
+            currentBytes = compactionState.builder.getFileSize();
+        } finally {
+            compactionState.builder = null;
+        }
         compactionState.currentFileSize = currentBytes;
         compactionState.totalBytes += currentBytes;
 

@@ -38,8 +38,8 @@ public class FileMetaData {
     public FileMetaData(long number, long fileSize, InternalKey smallest, InternalKey largest) {
         this.number = number;
         this.fileSize = fileSize;
-        this.smallest = smallest;
-        this.largest = largest;
+        this.smallest = smallest.compact();
+        this.largest = largest.compact();
     }
 
     public long getFileSize() {
